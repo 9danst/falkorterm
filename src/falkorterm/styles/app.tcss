@@ -1,0 +1,51 @@
+Screen {
+    layout: vertical;
+}
+
+#main {
+    height: 1fr;
+}
+
+ContextWidget {
+    width: 1fr;
+    max-width: 25%;
+    height: 1fr;
+    border: solid $primary;
+    border-title-color: $text;
+}
+
+#right-pane {
+    width: 3fr;
+    height: 1fr;
+}
+
+ResultsWidget {
+    height: 1fr;
+    border: solid $primary;
+    border-title-color: $text;
+}
+
+QueryWidget {
+    height: 12;
+    border: solid $accent;
+    border-title-color: $text;
+}
+
+QueryWidget TextArea {
+    height: 1fr;
+}
+
+#status-label {
+    dock: right;
+    padding: 0 1;
+}
+
+.results-error {
+    color: $error;
+    padding: 1;
+}
+
+.results-meta {
+    color: $text-muted;
+    padding: 0 1;
+}
