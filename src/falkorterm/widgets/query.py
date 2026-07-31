@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from textual.binding import Binding
 from textual.message import Message
-from textual.widgets import Static, TextArea
+from textual.widgets import Static
 
 from falkorterm.history import HistoryStore
+from falkorterm.widgets.cypher_area import CypherTextArea, SchemaTokens
 
 
 class QuerySubmitted(Message):
@@ -23,7 +24,7 @@ class QueryWidget(Static):
     ]
 
     _HINT = "Ctrl+Enter · ↑↓ history"
-    _HINT_RUNNING = "Esc cancel"
+    _HINT_RUNNING = "Esc cancel (disconnects query)"
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -35,7 +36,7 @@ class QueryWidget(Static):
         self._history_target: str = ""
 
     def compose(self):
-        yield TextArea(id="cypher-input")
+        yield CypherTextArea(id="cypher-input")
 
     def action_copy_query(self) -> None:
         text = self.get_text()
@@ -46,7 +47,7 @@ class QueryWidget(Static):
 
     def on_mount(self) -> None:
         # Prefer SQL highlighting as a stand-in; Cypher is not a built-in language.
-        area = self.query_one("#cypher-input", TextArea)
+        area = self.query_one("#cypher-input", CypherTextArea)
         try:
             area.language = "sql"
         except Exception:  # noqa: BLE001
@@ -57,20 +58,33 @@ class QueryWidget(Static):
         self._history_target = target
         self.set_history(store.load(target))
 
+    def set_schema_tokens(
+        self,
+        labels: tuple[str, ...] | list[str] = (),
+        relations: tuple[str, ...] | list[str] = (),
+        properties: tuple[str, ...] | list[str] = (),
+    ) -> None:
+        tokens = SchemaTokens(
+            labels=tuple(labels),
+            relations=tuple(relations),
+            properties=tuple(properties),
+        )
+        self.query_one("#cypher-input", CypherTextArea).set_schema_tokens(tokens)
+
     def set_history(self, entries: list[str]) -> None:
         self._history = list(entries)
         self._history_index = None
 
     def get_text(self) -> str:
-        return self.query_one("#cypher-input", TextArea).text
+        return self.query_one("#cypher-input", CypherTextArea).text
 
     def set_text(self, text: str) -> None:
-        area = self.query_one("#cypher-input", TextArea)
+        area = self.query_one("#cypher-input", CypherTextArea)
         area.load_text(text)
 
     def insert_template(self, text: str) -> None:
         self.set_text(text)
-        self.query_one("#cypher-input", TextArea).focus()
+        self.query_one("#cypher-input", CypherTextArea).focus()
 
     def append_snippet(self, snippet: str) -> None:
         current = self.get_text()
@@ -78,7 +92,7 @@ class QueryWidget(Static):
             self.set_text(current.rstrip() + " " + snippet)
         else:
             self.set_text(snippet)
-        self.query_one("#cypher-input", TextArea).focus()
+        self.query_one("#cypher-input", CypherTextArea).focus()
 
     def set_running(self, running: bool) -> None:
         if running:
@@ -104,7 +118,7 @@ class QueryWidget(Static):
     def on_key(self, event) -> None:  # type: ignore[no-untyped-def]
         if event.key not in ("up", "down"):
             return
-        area = self.query_one("#cypher-input", TextArea)
+        area = self.query_one("#cypher-input", CypherTextArea)
         # Only navigate history when cursor is at the start of the document.
         if area.cursor_location != (0, 0):
             return

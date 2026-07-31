@@ -202,4 +202,55 @@ ConnectionScreen {
     margin-right: 1;
 }
 
+#export-format-dialog {
+    width: 50;
+    height: auto;
+    background: $surface;
+    border: tall $accent;
+    padding: 1 2;
+}
+
+#export-format-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+#export-format-actions {
+    height: auto;
+    align: left middle;
+    margin-top: 1;
+}
+
+#export-format-actions Button {
+    margin-right: 1;
+}
+
+#confirm-dialog {
+    width: 56;
+    height: auto;
+    background: $surface;
+    border: tall $warning;
+    padding: 1 2;
+}
+
+#confirm-title {
+    text-style: bold;
+    color: $warning;
+    margin-bottom: 1;
+}
+
+#confirm-message {
+    margin-bottom: 1;
+}
+
+#confirm-actions {
+    height: auto;
+    align: left middle;
+}
+
+#confirm-actions Button {
+    margin-right: 1;
+}
+
 
