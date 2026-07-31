@@ -1,5 +1,6 @@
 Screen {
     layout: vertical;
+    background: $background;
 }
 
 #main {
@@ -8,10 +9,18 @@ Screen {
 
 ContextWidget {
     width: 1fr;
-    max-width: 25%;
+    max-width: 28%;
     height: 1fr;
-    border: solid $primary;
-    border-title-color: $text;
+    border: tall $primary;
+    border-title-color: $accent;
+    border-title-align: left;
+    border-subtitle-color: $text-muted;
+    background: $surface;
+    padding: 0 1;
+}
+
+ContextWidget:focus-within {
+    border: tall $accent;
 }
 
 #right-pane {
@@ -21,23 +30,74 @@ ContextWidget {
 
 ResultsWidget {
     height: 1fr;
-    border: solid $primary;
-    border-title-color: $text;
+    border: tall $primary;
+    border-title-color: $accent;
+    border-title-align: left;
+    border-subtitle-color: $text-muted;
+    background: $surface;
+    padding: 0 1;
+}
+
+ResultsWidget:focus-within {
+    border: tall $accent;
 }
 
 QueryWidget {
     height: 12;
-    border: solid $accent;
-    border-title-color: $text;
+    border: tall $secondary;
+    border-title-color: $accent;
+    border-title-align: left;
+    border-subtitle-color: $text-muted;
+    background: $panel;
+    padding: 0 1;
+}
+
+QueryWidget:focus-within {
+    border: tall $accent;
+}
+
+QueryWidget.running {
+    border: tall $warning;
+    border-title-color: $warning;
 }
 
 QueryWidget TextArea {
     height: 1fr;
+    background: $panel;
 }
 
-#status-label {
-    dock: right;
+StatusBar {
+    dock: bottom;
+    height: 1;
+    background: $panel;
+    color: $text;
     padding: 0 1;
+}
+
+StatusBar .status-ok {
+    color: $success;
+}
+
+StatusBar .status-err {
+    color: $error;
+}
+
+StatusBar .status-run {
+    color: $warning;
+}
+
+.section-heading {
+    color: $text-muted;
+    text-style: bold;
+    padding: 1 0 0 0;
+    height: 2;
+}
+
+.empty-state {
+    color: $text-muted;
+    text-style: italic;
+    padding: 0 1;
+    height: 1;
 }
 
 .results-error {
@@ -47,5 +107,99 @@ QueryWidget TextArea {
 
 .results-meta {
     color: $text-muted;
+    padding: 0 0 1 0;
+    height: 1;
+}
+
+DataTable {
+    height: 1fr;
+}
+
+ListView {
+    height: auto;
+    max-height: 1fr;
+    background: transparent;
+}
+
+ListView > ListItem {
     padding: 0 1;
 }
+
+ListView > ListItem.--highlight {
+    background: $primary 30%;
+}
+
+ConnectionScreen {
+    align: center middle;
+}
+
+#connection-dialog {
+    width: 60;
+    height: auto;
+    max-height: 90%;
+    background: $surface;
+    border: tall $accent;
+    padding: 1 2;
+}
+
+#connection-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+#connection-status {
+    margin: 1 0;
+    height: 1;
+}
+
+#connection-actions {
+    height: auto;
+    align: left middle;
+}
+
+#connection-actions Button {
+    margin-right: 1;
+}
+
+#conn-graph-select {
+    margin-bottom: 1;
+}
+
+#cell-detail-dialog {
+    width: 70;
+    height: auto;
+    max-height: 90%;
+    background: $surface;
+    border: tall $accent;
+    padding: 1 2;
+}
+
+#cell-detail-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+#cell-detail-display {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#cell-detail-body {
+    height: auto;
+    max-height: 30;
+    overflow-y: auto;
+    margin-bottom: 1;
+}
+
+#cell-detail-actions {
+    height: auto;
+    align: left middle;
+}
+
+#cell-detail-actions Button {
+    margin-right: 1;
+}
+
+
