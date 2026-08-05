@@ -40,9 +40,9 @@ uv run falkorterm
 uv run python -m falkorterm
 ```
 
-Al arrancar se abre la **pantalla de conexión**. Usa **Connect** para listar grafos y **Open** para entrar. Puedes guardar perfiles con nombre (host/port/password/graph); el perfil `default`, si existe, se aplica al abrir. Con `Ctrl+o` cambias de grafo o servidor sin reiniciar.
+Al arrancar se abre la **pantalla de conexión**. Usa **Connect** para listar grafos y **Open** para entrar. Puedes guardar perfiles con nombre (host/port/password/graph/read-only); el perfil `default`, si existe, se aplica al abrir. Con `Ctrl+o` cambias de grafo o servidor sin reiniciar.
 
-Las queries de escritura (`CREATE`, `MERGE`, `DELETE`, etc.) piden confirmación antes de ejecutarse. El editor sugiere labels/relaciones/propiedades del schema (aceptar con flecha derecha).
+Marca **Read-only** (o `FALKOR_READ_ONLY=1`) para bloquear queries de escritura en el cliente (no es un ACL del servidor). Sin read-only, las escrituras (`CREATE`, `MERGE`, `DELETE`, etc.) piden confirmación. El editor sugiere labels/relaciones/propiedades del schema (aceptar con flecha derecha).
 
 ### Variables de entorno
 
@@ -54,6 +54,7 @@ Las queries de escritura (`CREATE`, `MERGE`, `DELETE`, etc.) piden confirmación
 | `FALKOR_PASSWORD` | _(vacío)_ | Password Redis/FalkorDB |
 | `FALKOR_TIMEOUT_MS` | `30000` | Timeout de query (ms) |
 | `FALKOR_MAX_ROWS` | `500` | Máximo de filas en la tabla |
+| `FALKOR_READ_ONLY` | _(off)_ | `1`/`true`/`yes`/`on` → conexión solo lectura |
 | `FALKOR_HISTORY_PATH` | _(XDG data)_ | Ruta del historial Cypher |
 | `FALKOR_EXPORT_DIR` | _(XDG data)/exports_ | Directorio de exportación CSV/JSON |
 | `FALKOR_PROFILES_PATH` | _(XDG data)/profiles.json_ | Perfiles de conexión guardados |
@@ -66,23 +67,34 @@ Ejemplo:
 FALKOR_GRAPH=social FALKOR_HOST=127.0.0.1 uv run falkorterm
 ```
 
+### Temas
+
+El default es **flux-3** (fucsia / magenta / ámbar). También están `flux-1` (solo fucsia), `flux-2` (fucsia + cyan) y `falkorterm` (teal). Cámbialos con la Command Palette de Textual (`Ctrl+P` → *Change theme*).
+
 ### Atajos
 
 | Tecla | Acción |
 |-------|--------|
-| `Ctrl+1` | Foco en Context |
-| `Ctrl+2` | Foco en Results |
-| `Ctrl+3` | Foco en Query |
+| `F1` / `Ctrl+1` | Foco en Context |
+| `F2` / `Ctrl+2` | Foco en Results |
+| `F3` / `Ctrl+3` | Foco en Query |
 | `Ctrl+Enter` / `Ctrl+J` | Ejecutar Cypher |
 | `Ctrl+o` | Abrir pantalla de conexión / cambiar grafo |
 | `Ctrl+e` | Exportar resultados (CSV o JSON) |
 | `Ctrl+Shift+C` | Copiar query al portapapeles |
+| `F4` / `Ctrl+Shift+H` (en Query) | Abrir cheatsheet Cypher (FalkorDB) |
 | `Esc` | Cancelar query en curso (cierra conexión y reconecta) |
 | `r` | Refrescar schema (o reabrir conexión si falló) |
 | `q` | Salir |
 | `y` / `Y` (en Results) | Copiar celda / fila (TSV) |
-| `Enter` (en Context) | Insertar plantilla Cypher / propiedad en el editor |
+| `g` (en Results) | Alternar tabla / grafo ASCII |
+| `c` (en grafo, focus F2) | Copiar diagrama ASCII al portapapeles |
+| `Enter` (en Context) | Insertar plantilla MATCH / propiedad en el editor |
+| `c` (en Context) | Insertar plantilla `count` del label/relación enfocado |
 | `Enter` (en Results) | Inspeccionar celda / nodo |
+| `x` (detail / grafo) | Expandir vecinos del nodo (inserta Cypher y ejecuta) |
+
+Para pegar fuera del terminal en Wayland hace falta [`wl-clipboard`](https://github.com/bugaevc/wl-clipboard) (`wl-copy`); en X11, `xclip` o `xsel`. Sin eso, OSC 52 suele fallar (p. ej. en Cursor).
 
 ## Tests
 
@@ -93,5 +105,5 @@ uv run pytest -v
 ## Layout
 
 - **Context** (izquierda): labels, relaciones, property keys
-- **Results** (arriba derecha): tabla de resultados o errores
+- **Results** (arriba derecha): tabla de resultados o grafo ASCII (`g`), o errores
 - **Query** (abajo derecha): editor Cypher

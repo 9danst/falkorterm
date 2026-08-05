@@ -11,7 +11,13 @@ def test_default_profiles_path_respects_env(monkeypatch, tmp_path: Path):
 def test_save_get_list_delete(tmp_path: Path):
     store = ProfileStore(tmp_path / "profiles.json")
     store.save(
-        Profile(name="local", host="127.0.0.1", port=6380, graph="social")
+        Profile(
+            name="local",
+            host="127.0.0.1",
+            port=6380,
+            graph="social",
+            read_only=True,
+        )
     )
     store.save(Profile(name="default", host="localhost", graph="g1"))
     names = [p.name for p in store.list()]
@@ -21,9 +27,24 @@ def test_save_get_list_delete(tmp_path: Path):
     assert got.host == "127.0.0.1"
     assert got.port == 6380
     assert got.graph == "social"
+    assert got.read_only is True
+    assert store.get("default") is not None
+    assert store.get("default").read_only is False
     store.delete("local")
     assert store.get("local") is None
     assert [p.name for p in store.list()] == ["default"]
+
+
+def test_legacy_profile_without_read_only(tmp_path: Path):
+    path = tmp_path / "profiles.json"
+    path.write_text(
+        '{"profiles": [{"name": "old", "host": "h", "port": 6379, "graph": "g"}]}',
+        encoding="utf-8",
+    )
+    store = ProfileStore(path)
+    got = store.get("old")
+    assert got is not None
+    assert got.read_only is False
 
 
 def test_save_overwrites_same_name(tmp_path: Path):

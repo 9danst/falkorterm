@@ -7,7 +7,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.widgets import Button, Checkbox, Input, Label, Select, Static
 
 from falkorterm.client.falkor import FalkorClient
 from falkorterm.client.models import ConnectionConfig, FalkorConnectionError
@@ -86,6 +86,11 @@ class ConnectionScreen(ModalScreen[ConnectionConfig | None]):
                 prompt="Known graphs",
                 allow_blank=True,
             )
+            yield Checkbox(
+                "Read-only (block write queries)",
+                value=self._initial.read_only,
+                id="conn-read-only",
+            )
             yield Static("", id="connection-status")
             with Horizontal(id="connection-actions"):
                 yield Button("Connect", id="btn-connect", variant="primary")
@@ -128,6 +133,7 @@ class ConnectionScreen(ModalScreen[ConnectionConfig | None]):
             self.query_one("#conn-port", Input).value = str(profile.port)
             self.query_one("#conn-password", Input).value = profile.password or ""
             self.query_one("#conn-graph", Input).value = profile.graph
+            self.query_one("#conn-read-only", Checkbox).value = profile.read_only
             select = self.query_one("#conn-profile-select", Select)
             try:
                 select.value = profile.name
@@ -141,6 +147,7 @@ class ConnectionScreen(ModalScreen[ConnectionConfig | None]):
         port_raw = self.query_one("#conn-port", Input).value.strip() or "6379"
         password = self.query_one("#conn-password", Input).value
         graph = self.query_one("#conn-graph", Input).value.strip() or "falkorterm"
+        read_only = self.query_one("#conn-read-only", Checkbox).value
         try:
             port = int(port_raw)
         except ValueError as exc:
@@ -151,6 +158,7 @@ class ConnectionScreen(ModalScreen[ConnectionConfig | None]):
             port=port,
             password=password or None,
             graph=graph,
+            read_only=read_only,
         )
 
     def _set_status(self, message: str, *, error: bool = False) -> None:
@@ -231,7 +239,14 @@ class ConnectionScreen(ModalScreen[ConnectionConfig | None]):
                 # Already on the right target; refresh config timeouts.
                 self._client.connect(config)
             opened = self._client.config or config
-            self.dismiss(opened)
+            self.dismiss(
+                replace(
+                    opened,
+                    read_only=config.read_only,
+                    timeout_ms=config.timeout_ms,
+                    max_rows=config.max_rows,
+                )
+            )
         except FalkorConnectionError as exc:
             self._set_status(str(exc), error=True)
 
@@ -252,6 +267,7 @@ class ConnectionScreen(ModalScreen[ConnectionConfig | None]):
             port=config.port,
             password=config.password,
             graph=config.graph,
+            read_only=config.read_only,
         )
         self._profile_store.save(profile)
         self._refresh_profile_select(selected=name)

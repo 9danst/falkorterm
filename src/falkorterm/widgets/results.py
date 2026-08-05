@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.message import Message
 from textual.widgets import DataTable, Label, Static
 
 from falkorterm.client.models import CellValue, QueryResult
+
+GRAPH_HINT = "g table/graph · ↑↓ · Enter · x expand · c copy"
+TabId = Literal["table", "graph"]
 
 
 def format_elapsed_ms(elapsed_ms: float | None) -> str | None:
@@ -115,8 +120,7 @@ class TableResultView(Vertical):
         text = self.get_cell_text(table.cursor_row, table.cursor_column)
         if text is None:
             return False
-        self.app.copy_to_clipboard(text)
-        self.notify("Copied cell")
+        self.app.copy_to_clipboard(text, what="cell")
         return True
 
     def copy_row(self) -> bool:
@@ -124,8 +128,7 @@ class TableResultView(Vertical):
         text = self.get_row_tsv(table.cursor_row)
         if text is None:
             return False
-        self.app.copy_to_clipboard(text)
-        self.notify("Copied row")
+        self.app.copy_to_clipboard(text, what="row")
         return True
 
     def _cell_at(self, row: int | None, column: int | None) -> CellValue | None:
@@ -148,45 +151,129 @@ class TableResultView(Vertical):
 
 
 class ResultsWidget(Static):
-    """Results panel with table view and row/timing meta."""
+    """Results panel with table / ASCII graph toggle."""
 
     BINDINGS = [
         Binding("y", "copy_cell", "Copy cell", show=False),
         Binding("Y", "copy_row", "Copy row", show=False),
+        Binding("g", "toggle_graph", "Toggle graph", show=False),
+        Binding("c", "copy_graph", "Copy graph", show=False),
     ]
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.border_title = "Results"
         self._last_result: QueryResult | None = None
+        self._mode: TabId = "table"
 
     def compose(self):
+        from falkorterm.widgets.graph import GraphResultView
+
         yield TableResultView(id="table-view")
+        yield GraphResultView(id="graph-view")
+
+    def on_mount(self) -> None:
+        self._apply_mode_visibility()
+
+    def prepare_manual_query(self) -> None:
+        """Compatibility no-op (session merge removed in ASCII v1 restore)."""
+
+    def begin_expand_merge(self, node_id: int) -> None:  # noqa: ARG002
+        """Compatibility no-op; expand still runs a query that replaces the result."""
+
+    @property
+    def graph_focus_id(self) -> int | None:
+        return None
 
     def show_result(self, result: QueryResult) -> None:
+        from falkorterm.widgets.graph import GraphResultView
+
         self._last_result = result
         self.query_one("#table-view", TableResultView).show_result(result)
+        self.query_one("#graph-view", GraphResultView).show_result(result)
+        self._refresh_chrome()
+        self._apply_mode_visibility()
+
+    def show_error(self, message: str) -> None:
+        from falkorterm.widgets.graph import GraphResultView
+
+        self._last_result = None
+        self.query_one("#table-view", TableResultView).show_error(message)
+        self.query_one("#graph-view", GraphResultView).show_error(message)
+        mode_tag = " · graph" if self._mode == "graph" else ""
+        self.border_title = f"Results · error{mode_tag}"
+        self.border_subtitle = ""
+        self._apply_mode_visibility()
+
+    def _refresh_chrome(self) -> None:
+        result = self._last_result
+        mode_tag = " · graph" if self._mode == "graph" else ""
+        if result is None:
+            self.border_title = f"Results{mode_tag}"
+            self.border_subtitle = GRAPH_HINT if self._mode == "graph" else ""
+            return
         n = result.total_rows
         shown = len(result.rows)
         if result.truncated:
-            self.border_title = f"Results · {shown}/{n}"
+            self.border_title = f"Results · {shown}/{n}{mode_tag}"
         else:
-            self.border_title = f"Results · {n}"
+            self.border_title = f"Results · {n}{mode_tag}"
         elapsed = format_elapsed_ms(result.elapsed_ms)
-        self.border_subtitle = elapsed or ""
-
-    def show_error(self, message: str) -> None:
-        self._last_result = None
-        self.query_one("#table-view", TableResultView).show_error(message)
-        self.border_title = "Results · error"
-        self.border_subtitle = ""
+        if self._mode == "graph":
+            self.border_subtitle = (
+                f"{elapsed} · {GRAPH_HINT}" if elapsed else GRAPH_HINT
+            )
+        else:
+            self.border_subtitle = elapsed or ""
 
     @property
     def last_result(self) -> QueryResult | None:
         return self._last_result
 
+    @property
+    def mode(self) -> TabId:
+        return self._mode
+
+    def action_toggle_graph(self) -> None:
+        self._mode = "graph" if self._mode == "table" else "table"
+        self._apply_mode_visibility()
+        self._refresh_chrome()
+        self.focus_active_view()
+
+    def focus_active_view(self) -> None:
+        from falkorterm.widgets.graph import GraphResultView
+
+        if self._mode == "graph":
+            self.query_one("#graph-view", GraphResultView).focus()
+        else:
+            self.query_one("#results-table", DataTable).focus()
+
+    def _apply_mode_visibility(self) -> None:
+        from falkorterm.widgets.graph import GraphResultView
+
+        table = self.query_one("#table-view", TableResultView)
+        graph = self.query_one("#graph-view", GraphResultView)
+        table.display = self._mode == "table"
+        graph.display = self._mode == "graph"
+
     def action_copy_cell(self) -> None:
-        self.query_one("#table-view", TableResultView).copy_cell()
+        from falkorterm.widgets.graph import GraphResultView
+
+        if self._mode == "graph":
+            self.query_one("#graph-view", GraphResultView).copy_selected()
+        else:
+            self.query_one("#table-view", TableResultView).copy_cell()
 
     def action_copy_row(self) -> None:
-        self.query_one("#table-view", TableResultView).copy_row()
+        if self._mode == "table":
+            self.query_one("#table-view", TableResultView).copy_row()
+
+    def action_copy_graph(self) -> None:
+        from textual.actions import SkipAction
+
+        from falkorterm.widgets.graph import GraphResultView
+
+        if self._mode == "graph":
+            self.query_one("#graph-view", GraphResultView).copy_canvas()
+        else:
+            raise SkipAction()

@@ -62,6 +62,7 @@ async def test_connection_screen_open_dismisses_config(tmp_path):
         assert app.result is not None
         assert app.result.graph == "alpha"
         assert app.result.host == "localhost"
+        assert app.result.read_only is False
         assert app.client.connected
 
 
@@ -87,6 +88,7 @@ async def test_connection_screen_applies_saved_profile(tmp_path):
             port=6381,
             password="secret",
             graph="prod",
+            read_only=True,
         )
     )
     app = ConnectionHarness(profile_store=store)
@@ -101,6 +103,7 @@ async def test_connection_screen_applies_saved_profile(tmp_path):
         assert screen.query_one("#conn-password", Input).value == "secret"
         assert screen.query_one("#conn-graph", Input).value == "prod"
         assert screen.query_one("#conn-profile-name", Input).value == "staging"
+        assert screen.query_one("#conn-read-only").value is True
 
 
 async def test_connection_screen_save_profile(tmp_path):
@@ -113,9 +116,24 @@ async def test_connection_screen_save_profile(tmp_path):
         screen.query_one("#conn-profile-name", Input).value = "mine"
         screen.query_one("#conn-host", Input).value = "h"
         screen.query_one("#conn-graph", Input).value = "g"
+        screen.query_one("#conn-read-only").value = True
         screen._on_save_profile()
         await pilot.pause()
         saved = store.get("mine")
         assert saved is not None
         assert saved.host == "h"
         assert saved.graph == "g"
+        assert saved.read_only is True
+
+
+async def test_connection_screen_open_preserves_read_only(tmp_path):
+    app = ConnectionHarness(profile_store=ProfileStore(tmp_path / "p.json"))
+    async with app.run_test(size=(100, 50)) as pilot:
+        await pilot.pause()
+        screen = app.screen
+        assert isinstance(screen, ConnectionScreen)
+        screen.query_one("#conn-read-only").value = True
+        screen._on_open()
+        await pilot.pause()
+        assert app.result is not None
+        assert app.result.read_only is True

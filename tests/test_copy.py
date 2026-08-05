@@ -11,7 +11,7 @@ class CopyHarness(App):
         super().__init__()
         self.clipboard_log: list[str] = []
 
-    def copy_to_clipboard(self, text: str) -> None:  # type: ignore[override]
+    def copy_to_clipboard(self, text: str, *, what: str = "text") -> None:  # type: ignore[override]
         self.clipboard_log.append(text)
 
     def compose(self) -> ComposeResult:
@@ -60,7 +60,7 @@ async def test_cell_detail_copy():
             super().__init__()
             self.clipboard_log: list[str] = []
 
-        def copy_to_clipboard(self, text: str) -> None:  # type: ignore[override]
+        def copy_to_clipboard(self, text: str, *, what: str = "text") -> None:  # type: ignore[override]
             self.clipboard_log.append(text)
 
         def on_mount(self) -> None:

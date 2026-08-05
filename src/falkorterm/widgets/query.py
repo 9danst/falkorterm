@@ -21,9 +21,11 @@ class QueryWidget(Static):
 
     BINDINGS = [
         Binding("ctrl+shift+c", "copy_query", "Copy query", show=False),
+        # ctrl+h is Backspace in many terminals; F4 / ctrl+shift+h are reliable.
+        Binding("f4,ctrl+shift+h,ctrl+h", "open_cheatsheet", "Cheatsheet", show=True),
     ]
 
-    _HINT = "Ctrl+Enter · ↑↓ history"
+    _HINT = "Ctrl+Enter · ↑↓ history · F4 help"
     _HINT_RUNNING = "Esc cancel (disconnects query)"
 
     def __init__(self, **kwargs) -> None:
@@ -42,8 +44,12 @@ class QueryWidget(Static):
         text = self.get_text()
         if not text:
             return
-        self.app.copy_to_clipboard(text)
-        self.notify("Copied query")
+        self.app.copy_to_clipboard(text, what="query")
+
+    def action_open_cheatsheet(self) -> None:
+        from falkorterm.screens.cypher_cheatsheet import CypherCheatsheetScreen
+
+        self.app.push_screen(CypherCheatsheetScreen())
 
     def on_mount(self) -> None:
         # Prefer SQL highlighting as a stand-in; Cypher is not a built-in language.

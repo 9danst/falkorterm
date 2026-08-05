@@ -1,8 +1,8 @@
-from textual.app import App, ComposeResult
-
 from falkorterm.client.models import GraphSchema
 from falkorterm.widgets.context import ContextWidget, SchemaItemSelected
 from falkorterm.widgets.query import QueryWidget
+from textual.app import App, ComposeResult
+from textual.widgets import Collapsible, Label
 
 
 class ContextHarness(App):
@@ -11,12 +11,27 @@ class ContextHarness(App):
         yield QueryWidget(id="query")
 
     def on_schema_item_selected(self, event: SchemaItemSelected) -> None:
-        self.selected = (event.kind, event.name)
-        if event.kind == "label":
+        self.selected = (event.kind, event.name, event.action)
+        if event.action == "count":
+            if event.kind == "label":
+                template = f"MATCH (n:{event.name}) RETURN count(n) AS count"
+            else:
+                template = f"MATCH ()-[r:{event.name}]->() RETURN count(r) AS count"
+        elif event.kind == "label":
             template = f"MATCH (n:{event.name}) RETURN n LIMIT 25"
-        else:
+        elif event.kind == "relation":
             template = f"MATCH ()-[r:{event.name}]->() RETURN r LIMIT 25"
+        else:
+            return
         self.query_one("#query", QueryWidget).insert_template(template)
+
+
+def _item_name_and_count(item) -> tuple[str, str | None]:
+    name = str(item.query_one(".schema-name", Label).content)
+    count_labels = item.query(".schema-count")
+    if not count_labels:
+        return name, None
+    return name, str(count_labels.first().content)
 
 
 async def test_context_set_schema_and_select_label():
@@ -24,16 +39,71 @@ async def test_context_set_schema_and_select_label():
     async with app.run_test() as pilot:
         context = app.query_one("#context", ContextWidget)
         context.set_schema(
-            GraphSchema(labels=("Person",), relations=("KNOWS",))
+            GraphSchema(
+                labels=("Person",),
+                relations=("KNOWS",),
+                label_counts=(("Person", 3),),
+            )
         )
         await pilot.pause()
         labels = context.query_one("#labels-list")
         assert len(labels.children) == 1
-        # Post selection directly to exercise the message path.
-        from falkorterm.widgets.context import SchemaItemSelected
-
+        name, count = _item_name_and_count(labels.children[0])
+        assert name == "Person"
+        assert count == "3"
+        assert "(n)" not in name
+        labels_section = context.query_one("#labels-section", Collapsible)
+        assert labels_section.title == "Labels · 1"
+        rel_section = context.query_one("#relations-section", Collapsible)
+        assert rel_section.title == "Relations · 1"
+        assert context.border_title == "Context · 2"
+        assert not context.query_one("#labels-empty").display
         context.post_message(SchemaItemSelected("label", "Person"))
         await pilot.pause()
-        assert app.selected == ("label", "Person")
+        assert app.selected == ("label", "Person", "match")
         assert "Person" in app.query_one("#query", QueryWidget).get_text()
         assert "LIMIT 25" in app.query_one("#query", QueryWidget).get_text()
+
+
+async def test_context_count_action():
+    app = ContextHarness()
+    async with app.run_test() as pilot:
+        context = app.query_one("#context", ContextWidget)
+        context.set_schema(GraphSchema(labels=("Person",), relations=("KNOWS",)))
+        await pilot.pause()
+        context.post_message(
+            SchemaItemSelected("label", "Person", action="count")
+        )
+        await pilot.pause()
+        assert app.selected == ("label", "Person", "count")
+        text = app.query_one("#query", QueryWidget).get_text()
+        assert "count(n)" in text
+        context.post_message(
+            SchemaItemSelected("relation", "KNOWS", action="count")
+        )
+        await pilot.pause()
+        assert "count(r)" in app.query_one("#query", QueryWidget).get_text()
+
+
+async def test_context_empty_schema_shows_empty_states():
+    app = ContextHarness()
+    async with app.run_test() as pilot:
+        context = app.query_one("#context", ContextWidget)
+        context.set_schema(GraphSchema(labels=(), relations=()))
+        await pilot.pause()
+        assert context.query_one("#labels-empty").display
+        assert context.query_one("#relations-empty").display
+        assert context.query_one("#properties-empty").display
+        assert not context.query_one("#labels-list").display
+        assert context.border_title == "Context · 0"
+        assert context.query_one("#labels-section", Collapsible).title == "Labels · 0"
+
+
+async def test_context_sections_expanded_by_default():
+    app = ContextHarness()
+    async with app.run_test() as pilot:
+        context = app.query_one("#context", ContextWidget)
+        await pilot.pause()
+        assert not context.query_one("#labels-section", Collapsible).collapsed
+        assert not context.query_one("#relations-section", Collapsible).collapsed
+        assert not context.query_one("#properties-section", Collapsible).collapsed

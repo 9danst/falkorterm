@@ -7,6 +7,10 @@ Screen {
     height: 1fr;
 }
 
+Header {
+    text-style: bold;
+}
+
 ContextWidget {
     width: 1fr;
     max-width: 28%;
@@ -14,6 +18,7 @@ ContextWidget {
     border: tall $primary;
     border-title-color: $accent;
     border-title-align: left;
+    border-title-style: bold;
     border-subtitle-color: $text-muted;
     background: $surface;
     padding: 0 1;
@@ -33,6 +38,7 @@ ResultsWidget {
     border: tall $primary;
     border-title-color: $accent;
     border-title-align: left;
+    border-title-style: bold;
     border-subtitle-color: $text-muted;
     background: $surface;
     padding: 0 1;
@@ -47,6 +53,7 @@ QueryWidget {
     border: tall $secondary;
     border-title-color: $accent;
     border-title-align: left;
+    border-title-style: bold;
     border-subtitle-color: $text-muted;
     background: $panel;
     padding: 0 1;
@@ -59,11 +66,13 @@ QueryWidget:focus-within {
 QueryWidget.running {
     border: tall $warning;
     border-title-color: $warning;
+    border-title-style: bold;
 }
 
 QueryWidget TextArea {
     height: 1fr;
     background: $panel;
+    text-style: none;
 }
 
 StatusBar {
@@ -86,11 +95,43 @@ StatusBar .status-run {
     color: $warning;
 }
 
-.section-heading {
+ContextWidget Collapsible {
+    padding-bottom: 0;
+    padding-left: 0;
+    border-top: tall $primary 40%;
+    background: transparent;
+}
+
+ContextWidget Collapsible:first-of-type {
+    border-top: none;
+}
+
+ContextWidget Collapsible > Contents {
+    padding: 0 0 0 1;
+}
+
+ContextWidget .schema-row {
+    width: 1fr;
+    height: 1;
+}
+
+ContextWidget .schema-name {
+    width: 1fr;
+    height: 1;
+}
+
+ContextWidget .schema-count {
+    width: auto;
+    height: 1;
     color: $text-muted;
-    text-style: bold;
-    padding: 1 0 0 0;
-    height: 2;
+    text-align: right;
+    padding-left: 1;
+}
+
+ContextWidget ListView {
+    height: auto;
+    max-height: 12;
+    background: transparent;
 }
 
 .empty-state {
@@ -102,6 +143,7 @@ StatusBar .status-run {
 
 .results-error {
     color: $error;
+    text-style: bold;
     padding: 1;
 }
 
@@ -113,6 +155,15 @@ StatusBar .status-run {
 
 DataTable {
     height: 1fr;
+}
+
+GraphResultView {
+    height: 1fr;
+}
+
+#graph-canvas {
+    height: auto;
+    width: auto;
 }
 
 ListView {
@@ -127,6 +178,11 @@ ListView > ListItem {
 
 ListView > ListItem.--highlight {
     background: $primary 30%;
+    text-style: bold;
+}
+
+DataTable > .datatable--header {
+    text-style: bold;
 }
 
 ConnectionScreen {
@@ -160,6 +216,7 @@ ConnectionScreen {
 
 #connection-actions Button {
     margin-right: 1;
+    text-style: bold;
 }
 
 #conn-graph-select {
@@ -200,6 +257,7 @@ ConnectionScreen {
 
 #cell-detail-actions Button {
     margin-right: 1;
+    text-style: bold;
 }
 
 #export-format-dialog {
@@ -224,6 +282,7 @@ ConnectionScreen {
 
 #export-format-actions Button {
     margin-right: 1;
+    text-style: bold;
 }
 
 #confirm-dialog {
@@ -251,6 +310,42 @@ ConnectionScreen {
 
 #confirm-actions Button {
     margin-right: 1;
+    text-style: bold;
+}
+
+CypherCheatsheetScreen {
+    align: center middle;
+}
+
+#cypher-cheatsheet-dialog {
+    width: 78;
+    height: auto;
+    max-height: 90%;
+    background: $surface;
+    border: tall $accent;
+    padding: 1 2;
+}
+
+#cypher-cheatsheet-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+#cypher-cheatsheet-body {
+    height: 1fr;
+    max-height: 32;
+    margin-bottom: 1;
+}
+
+#cypher-cheatsheet-actions {
+    height: auto;
+    align: left middle;
+}
+
+#cypher-cheatsheet-actions Button {
+    margin-right: 1;
+    text-style: bold;
 }
 
 

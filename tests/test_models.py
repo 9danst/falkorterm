@@ -1,4 +1,4 @@
-from falkorterm.client.models import ConnectionConfig, GraphSchema, QueryResult
+from falkorterm.client.models import CellValue, ConnectionConfig, GraphSchema, QueryResult
 
 
 def test_connection_config_defaults():
@@ -9,6 +9,7 @@ def test_connection_config_defaults():
     assert cfg.password is None
     assert cfg.timeout_ms == 30_000
     assert cfg.max_rows == 500
+    assert cfg.read_only is False
 
 
 def test_display_target():
@@ -20,9 +21,22 @@ def test_graph_schema_immutable():
     schema = GraphSchema(labels=("Person",), relations=("KNOWS",))
     assert schema.labels == ("Person",)
     assert schema.relations == ("KNOWS",)
+    assert schema.property_keys == ()
+    assert schema.label_counts == ()
 
 
 def test_query_result_defaults():
-    result = QueryResult(columns=("n",), rows=((1,),))
+    result = QueryResult(columns=("n",), rows=((CellValue("1"),),))
     assert result.truncated is False
     assert result.total_rows == 0
+    assert result.elapsed_ms is None
+
+
+def test_query_result_elapsed_ms():
+    result = QueryResult(
+        columns=("n",),
+        rows=((CellValue("1"),),),
+        total_rows=1,
+        elapsed_ms=12.5,
+    )
+    assert result.elapsed_ms == 12.5

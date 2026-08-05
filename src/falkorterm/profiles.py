@@ -13,6 +13,7 @@ class Profile:
     port: int = 6379
     password: str | None = None
     graph: str = "falkorterm"
+    read_only: bool = False
 
 
 def default_profiles_path() -> Path:
@@ -44,6 +45,7 @@ class ProfileStore:
                     port=int(item.get("port", 6379)),
                     password=item.get("password") or None,
                     graph=str(item.get("graph", "falkorterm")),
+                    read_only=bool(item.get("read_only", False)),
                 )
             )
         return sorted(profiles, key=lambda p: p.name.lower())
@@ -67,6 +69,7 @@ class ProfileStore:
                         "port": p.port,
                         "password": p.password,
                         "graph": p.graph,
+                        "read_only": p.read_only,
                     }
                     for p in profiles
                 ]
@@ -84,6 +87,7 @@ class ProfileStore:
                         "port": p.port,
                         "password": p.password,
                         "graph": p.graph,
+                        "read_only": p.read_only,
                     }
                     for p in profiles
                 ]

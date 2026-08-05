@@ -1,0 +1,56 @@
+---
+---
+FEED '\r'
+character='\r'
+Key(key='enter', character='\r', name='enter', is_printable=False, aliases=['enter', 'ctrl+m'])
+---
+FEED '\n'
+character='\n'
+Key(key='ctrl+j', character='\n', name='ctrl_j', is_printable=False, aliases=['ctrl+j', 'newline'])
+---
+FEED '\n'
+character='\n'
+Key(key='ctrl+j', character='\n', name='ctrl_j', is_printable=False, aliases=['ctrl+j', 'newline'])
+---
+FEED '\x1b[13;5u'
+character='\x1b'
+sequence='\x1b['
+sequence='\x1b[1'
+sequence='\x1b[13'
+sequence='\x1b[13;'
+sequence='\x1b[13;5'
+sequence='\x1b[13;5u'
+Key(key='ctrl+enter', character=None, name='ctrl_enter', is_printable=False)
+---
+FEED '\x1b[13;5~'
+character='\x1b'
+sequence='\x1b['
+sequence='\x1b[1'
+sequence='\x1b[13'
+sequence='\x1b[13;'
+sequence='\x1b[13;5'
+sequence='\x1b[13;5~'
+Key(key='ctrl+f3', character=None, name='ctrl_f3', is_printable=False)
+---
+FEED '\x1b[27;5;13~'
+character='\x1b'
+sequence='\x1b['
+sequence='\x1b[2'
+sequence='\x1b[27'
+sequence='\x1b[27;'
+sequence='\x1b[27;5'
+sequence='\x1b[27;5;'
+sequence='\x1b[27;5;1'
+sequence='\x1b[27;5;13'
+sequence='\x1b[27;5;13~'
+Key(key='ctrl+\r', character='\r', name='ctrl_\r', is_printable=False)
+---
+FEED '\x1b[13;2u'
+character='\x1b'
+sequence='\x1b['
+sequence='\x1b[1'
+sequence='\x1b[13'
+sequence='\x1b[13;'
+sequence='\x1b[13;2'
+sequence='\x1b[13;2u'
+Key(key='shift+enter', character=None, name='shift_enter', is_printable=False)

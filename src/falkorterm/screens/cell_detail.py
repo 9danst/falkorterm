@@ -9,6 +9,17 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
 from falkorterm.client.models import CellValue
+from falkorterm.explore import ExpandNeighborsRequested
+
+
+def _node_id(cell: CellValue) -> int | None:
+    detail = cell.detail
+    if not detail or detail.get("kind") != "node":
+        return None
+    node_id = detail.get("id")
+    if isinstance(node_id, bool) or not isinstance(node_id, int):
+        return None
+    return node_id
 
 
 class CellDetailScreen(ModalScreen[None]):
@@ -17,11 +28,13 @@ class CellDetailScreen(ModalScreen[None]):
     BINDINGS = [
         Binding("escape", "close", "Close", show=True),
         Binding("c", "copy", "Copy", show=True),
+        Binding("x", "expand", "Expand", show=False),
     ]
 
     def __init__(self, cell: CellValue, **kwargs) -> None:
         super().__init__(**kwargs)
         self._cell = cell
+        self._expand_id = _node_id(cell)
 
     def compose(self) -> ComposeResult:
         body = self._format_body()
@@ -30,6 +43,10 @@ class CellDetailScreen(ModalScreen[None]):
             yield Static(self._cell.display, id="cell-detail-display")
             yield Static(body, id="cell-detail-body")
             with Horizontal(id="cell-detail-actions"):
+                if self._expand_id is not None:
+                    yield Button(
+                        "Expand", id="btn-expand-neighbors", variant="warning"
+                    )
                 yield Button("Copy", id="btn-copy-detail", variant="success")
                 yield Button("Close", id="btn-close-detail", variant="primary")
 
@@ -53,11 +70,18 @@ class CellDetailScreen(ModalScreen[None]):
         self.dismiss(None)
 
     def action_copy(self) -> None:
-        self.app.copy_to_clipboard(self.copy_text())
-        self.notify("Copied to clipboard")
+        self.app.copy_to_clipboard(self.copy_text(), what="detail")
+
+    def action_expand(self) -> None:
+        if self._expand_id is None:
+            return
+        self.post_message(ExpandNeighborsRequested(self._expand_id))
+        self.dismiss(None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close-detail":
             self.dismiss(None)
         elif event.button.id == "btn-copy-detail":
             self.action_copy()
+        elif event.button.id == "btn-expand-neighbors":
+            self.action_expand()

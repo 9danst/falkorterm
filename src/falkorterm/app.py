@@ -7,7 +7,6 @@ from typing import Any, Callable, Literal
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.theme import Theme
 from textual.widgets import Footer, Header, Static
 
 from falkorterm.client.falkor import FalkorClient
@@ -16,7 +15,14 @@ from falkorterm.client.models import (
     FalkorConnectionError,
     FalkorQueryError,
 )
+from falkorterm.clipboard import copy_text_system, format_copy_notification
 from falkorterm.config import load_config
+from falkorterm.explore import (
+    ExpandNeighborsRequested,
+    count_label_cypher,
+    count_relation_cypher,
+    neighbors_cypher,
+)
 from falkorterm.export import ExportFormat, write_export
 from falkorterm.history import HistoryStore
 from falkorterm.profiles import ProfileStore
@@ -31,22 +37,14 @@ from falkorterm.widgets.results import (
     ResultsWidget,
     format_result_meta,
 )
+from falkorterm.themes import ALL_THEMES, DEFAULT_THEME_NAME
 from falkorterm.write_guard import is_write_query
 
-FALKORTERM_THEME = Theme(
-    name="falkorterm",
-    primary="#1A6B6B",
-    secondary="#2A8F8F",
-    accent="#3ECFCF",
-    warning="#D4A017",
-    error="#E05C5C",
-    success="#3CB371",
-    foreground="#D8E6E6",
-    background="#0D1416",
-    surface="#121C1F",
-    panel="#162428",
-    dark=True,
-)
+
+def status_target(config: ConnectionConfig) -> str:
+    if config.read_only:
+        return f"{config.display_target} · read-only"
+    return config.display_target
 
 
 class StatusBar(Static):
@@ -117,9 +115,11 @@ class FalkorTerm(App):
     CSS_PATH = Path(__file__).parent / "styles" / "app.tcss"
     TITLE = "FalkorTerm"
     BINDINGS = [
-        Binding("ctrl+1", "focus_context", "Context"),
-        Binding("ctrl+2", "focus_results", "Results"),
-        Binding("ctrl+3", "focus_query", "Query"),
+        # F1–F3: reliably delivered by terminals. Ctrl+1/2/3 only work in
+        # Kitty-style key protocols (most terminals send nothing for Ctrl+digit).
+        Binding("f1,ctrl+1", "focus_context", "Context", priority=True),
+        Binding("f2,ctrl+2", "focus_results", "Results", priority=True),
+        Binding("f3,ctrl+3", "focus_query", "Query", priority=True),
         # Many terminals send \\n (ctrl+j) for Ctrl+Enter; only Kitty-style
         # protocols emit the literal ctrl+enter key.
         Binding("ctrl+j,ctrl+enter", "run_query", "Run", priority=True),
@@ -156,22 +156,31 @@ class FalkorTerm(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.register_theme(FALKORTERM_THEME)
-        self.theme = "falkorterm"
-        self.sub_title = self.config.display_target
+        for theme in ALL_THEMES:
+            self.register_theme(theme)
+        self.theme = DEFAULT_THEME_NAME
+        self.sub_title = status_target(self.config)
         self.query_one("#status", StatusBar).set_connection(
-            "disconnected", self.config.display_target, detail="opening…"
+            "disconnected", status_target(self.config), detail="opening…"
         )
         self._push_connection_screen(can_dismiss=False)
 
     def action_focus_context(self) -> None:
-        self.query_one("#context", ContextWidget).focus()
+        self.query_one("#labels-list").focus()
 
     def action_focus_results(self) -> None:
-        self.query_one("#results", ResultsWidget).focus()
+        self.query_one("#results", ResultsWidget).focus_active_view()
 
     def action_focus_query(self) -> None:
-        self.query_one("#query", QueryWidget).query_one("#cypher-input").focus()
+        self.query_one("#cypher-input").focus()
+
+    def copy_to_clipboard(self, text: str, *, what: str = "text") -> bool:
+        """Copy via OSC 52 and system tools. Returns True if a system tool succeeded."""
+        super().copy_to_clipboard(text)
+        ok = copy_text_system(text)
+        message, severity = format_copy_notification(ok, what)
+        self.notify(message, severity=severity)  # type: ignore[arg-type]
+        return ok
 
     def action_run_query(self) -> None:
         self.query_one("#query", QueryWidget).submit()
@@ -211,14 +220,14 @@ class FalkorTerm(App):
             self._connection_ok = False
             self.query_one("#status", StatusBar).set_connection(
                 "disconnected",
-                self.config.display_target,
+                status_target(self.config),
                 detail="cancelled · reconnect failed",
             )
             self.notify(f"Cancelled; reconnect failed: {exc}", severity="error")
             return
         self.query_one("#status", StatusBar).set_connection(
             "connected",
-            self.config.display_target,
+            status_target(self.config),
             detail="cancelled · reconnected",
         )
 
@@ -242,8 +251,15 @@ class FalkorTerm(App):
                 "Not connected. Press Ctrl+o to connect."
             )
             return
+        # Manual runs use layered layout (not ego) and replace the graph session.
+        self.query_one("#results", ResultsWidget).prepare_manual_query()
         cypher = event.cypher
         if is_write_query(cypher):
+            if self.config.read_only:
+                msg = "Read-only connection: write queries are blocked."
+                self.query_one("#results", ResultsWidget).show_error(msg)
+                self.notify(msg, severity="warning")
+                return
             self.push_screen(
                 ConfirmScreen(
                     "Confirm write query",
@@ -273,7 +289,7 @@ class FalkorTerm(App):
         self._query_generation += 1
         gen = self._query_generation
         self.query_one("#status", StatusBar).set_connection(
-            "running", self.config.display_target, detail="…"
+            "running", status_target(self.config), detail="…"
         )
         self.query_one("#query", QueryWidget).set_running(True)
         self.run_worker(
@@ -288,6 +304,12 @@ class FalkorTerm(App):
         if event.kind == "property":
             query.append_snippet(f"n.{event.name}")
             return
+        if event.action == "count":
+            if event.kind == "label":
+                query.insert_template(count_label_cypher(event.name))
+            elif event.kind == "relation":
+                query.insert_template(count_relation_cypher(event.name))
+            return
         if event.kind == "label":
             template = f"MATCH (n:{event.name}) RETURN n LIMIT 25"
         else:
@@ -296,6 +318,13 @@ class FalkorTerm(App):
 
     def on_cell_inspect_requested(self, event: CellInspectRequested) -> None:
         self.push_screen(CellDetailScreen(event.cell))
+
+    def on_expand_neighbors_requested(self, event: ExpandNeighborsRequested) -> None:
+        cypher = neighbors_cypher(event.node_id)
+        query = self.query_one("#query", QueryWidget)
+        query.set_text(cypher)
+        self.query_one("#results", ResultsWidget).begin_expand_merge(event.node_id)
+        self._start_query(cypher)
 
     def _push_connection_screen(self, *, can_dismiss: bool) -> None:
         screen = ConnectionScreen(
@@ -313,9 +342,9 @@ class FalkorTerm(App):
             return
         self.config = result
         self._connection_ok = True
-        self.sub_title = result.display_target
+        self.sub_title = status_target(result)
         status = self.query_one("#status", StatusBar)
-        status.set_connection("connected", result.display_target, detail="")
+        status.set_connection("connected", status_target(result), detail="")
         self.query_one("#query", QueryWidget).configure_history(
             self.history_store, result.display_target
         )
@@ -332,7 +361,7 @@ class FalkorTerm(App):
                 schema.property_keys,
             )
             self.query_one("#status", StatusBar).set_connection(
-                "connected", self.config.display_target
+                "connected", status_target(self.config)
             )
         except (FalkorQueryError, FalkorConnectionError) as exc:
             self.notify(f"Schema refresh failed: {exc}", severity="error")
@@ -367,7 +396,7 @@ class FalkorTerm(App):
         self.query_one("#results", ResultsWidget).show_result(result)
         self.query_one("#status", StatusBar).set_connection(
             "connected",
-            self.config.display_target,
+            status_target(self.config),
             detail=format_result_meta(result),
         )
 
@@ -382,13 +411,13 @@ class FalkorTerm(App):
             self._connection_ok = False
             self.query_one("#status", StatusBar).set_connection(
                 "disconnected",
-                self.config.display_target,
+                status_target(self.config),
                 detail=short,
             )
         else:
             self.query_one("#status", StatusBar).set_connection(
                 "connected",
-                self.config.display_target,
+                status_target(self.config),
                 detail=f"error: {short}",
             )
 

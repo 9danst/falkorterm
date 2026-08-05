@@ -40,7 +40,7 @@ Terminal client (Textual + Rich) for FalkorDB: browse entities/relations, write 
 
 ## UX bindings
 
-- `ctrl+1/2/3` — focus Context / Results / Query
+- `f1/f2/f3` (and `ctrl+1/2/3` when the terminal emits them) — focus Context / Results / Query
 - `ctrl+enter` — run query
 - `r` — refresh schema (and reconnect attempt on failure path)
 - `q` — quit

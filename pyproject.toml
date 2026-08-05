@@ -5,6 +5,7 @@ description = "Cliente TUI de FalkorDB (Textual)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "black>=26.5.1",
     "falkordb>=1.0.0",
     "textual[syntax]>=8.2.8",
 ]
@@ -27,7 +28,7 @@ build-backend = "hatchling.build"
 packages = ["src/falkorterm"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/falkorterm" = "falkorterm"
+"src/falkorterm/cheatsheet/cypher_falkordb.md" = "falkorterm/cheatsheet/cypher_falkordb.md"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
