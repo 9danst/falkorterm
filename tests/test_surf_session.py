@@ -67,6 +67,18 @@ def test_merge_keeps_focus_and_grows_model():
     assert {n.id for n in s.model.nodes} == {1, 2, 3}
 
 
+def test_merge_resets_edge_selection_to_node():
+    s = SurfSession()
+    s.seed(_model(_n(1), _n(2), edges=(_e(1, 2, eid=1),)))
+    s.cycle_neighbor(+1)
+    s.toggle_kind()
+    assert s.select_kind == "edge"
+
+    s.merge(_model(_n(1), _n(3), edges=(_e(1, 3, eid=2),)))
+
+    assert s.select_kind == "node"
+
+
 def test_toggle_kind_requires_neighbor_row():
     s = SurfSession()
     s.seed(_model(_n(1), _n(2), edges=(_e(1, 2, eid=1),)))

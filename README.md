@@ -79,7 +79,7 @@ El default es **flux-3** (fucsia / magenta / ámbar). También están `flux-1` (
 | `F2` / `Ctrl+2` | Foco en Results |
 | `F3` / `Ctrl+3` | Foco en Query |
 | `Ctrl+Enter` / `Ctrl+J` | Ejecutar Cypher |
-| `Ctrl+o` | Abrir pantalla de conexión / cambiar grafo |
+| `Ctrl+o` | Abrir pantalla de conexión / cambiar grafo (en Surf: jump-back) |
 | `Ctrl+e` | Exportar resultados (CSV o JSON) |
 | `Ctrl+Shift+C` | Copiar query al portapapeles |
 | `F4` / `Ctrl+Shift+H` (en Query) | Abrir cheatsheet Cypher (FalkorDB) |
@@ -87,12 +87,13 @@ El default es **flux-3** (fucsia / magenta / ámbar). También están `flux-1` (
 | `r` | Refrescar schema (o reabrir conexión si falló) |
 | `q` | Salir |
 | `y` / `Y` (en Results) | Copiar celda / fila (TSV) |
-| `g` (en Results) | Alternar tabla / grafo ASCII |
-| `c` (en grafo, focus F2) | Copiar diagrama ASCII al portapapeles |
+| `g` (en Results) | Ciclar tabla → grafo ASCII → Surf |
+| `c` (en grafo/Surf, focus F2) | Copiar diagrama ASCII o Surf al portapapeles |
 | `Enter` (en Context) | Insertar plantilla MATCH / propiedad en el editor |
 | `c` (en Context) | Insertar plantilla `count` del label/relación enfocado |
 | `Enter` (en Results) | Inspeccionar celda / nodo |
 | `x` (detail / grafo) | Expandir vecinos del nodo (inserta Cypher y ejecuta) |
+| `j`/`k`, `l`, `h`/`Ctrl+o`, `L`, `Tab` (en Surf) | Mover cursor, saltar, volver/avanzar historial y alternar nodo/arista |
 
 Para pegar fuera del terminal en Wayland hace falta [`wl-clipboard`](https://github.com/bugaevc/wl-clipboard) (`wl-copy`); en X11, `xclip` o `xsel`. Sin eso, OSC 52 suele fallar (p. ej. en Cursor).
 
@@ -105,5 +106,5 @@ uv run pytest -v
 ## Layout
 
 - **Context** (izquierda): labels, relaciones, property keys
-- **Results** (arriba derecha): tabla de resultados o grafo ASCII (`g`), o errores
+- **Results** (arriba derecha): tabla de resultados, grafo ASCII o Surf (`g`), o errores
 - **Query** (abajo derecha): editor Cypher

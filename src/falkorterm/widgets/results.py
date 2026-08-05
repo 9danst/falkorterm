@@ -11,8 +11,8 @@ from falkorterm.client.models import CellValue, QueryResult
 from falkorterm.graph.extract import extract_graph
 from falkorterm.graph.session import SurfSession
 
-GRAPH_HINT = "g table/graph · ↑↓ · Enter · x expand · c copy"
-SURF_HINT = "g table/ascii/surf · j/k · l hop · h back · Tab · x · c"
+GRAPH_HINT = "g table/ascii/surf · ↑↓ · Enter · x expand · c copy"
+SURF_HINT = "g table/ascii/surf · j/k · l hop · h/Ctrl+o back · L forward · Tab · x · c"
 TabId = Literal["table", "graph", "surf"]
 
 

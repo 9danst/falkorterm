@@ -8,7 +8,7 @@ from falkorterm.graph.render_text import node_caption
 from falkorterm.graph.session import NeighborEntry, SurfSession
 
 _PROP_KEYS = ("name", "title", "code", "iata", "label")
-_HINT = "j/k · l hop · h back · Tab edge · x expand · g cycle"
+_HINT = "j/k · l hop · h/Ctrl+o back · L forward · Tab edge · x expand · g cycle"
 
 
 def render_surf(session: SurfSession) -> Text:

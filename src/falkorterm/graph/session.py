@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from falkorterm.graph.extract import edge_key
 from falkorterm.graph.merge import merge_graphs
 from falkorterm.graph.models import GraphEdge, GraphNode, GraphViewModel
 
@@ -56,6 +55,7 @@ class SurfSession:
         ids = {n.id for n in self.model.nodes}
         if self.focus_id not in ids:
             self.focus_id = self.model.nodes[0].id if self.model.nodes else None
+        self.select_kind = "node"
         self._clamp_neighbor()
 
     def neighbors(self) -> list[NeighborEntry]:

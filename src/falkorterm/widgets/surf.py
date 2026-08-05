@@ -78,7 +78,7 @@ class SurfView(VerticalScroll):
         elif event.key == "ctrl+o":
             handled = self._jump_back()
             consume = True
-        elif event.key == "ctrl+i":
+        elif event.key in {"ctrl+i", "L"}:
             handled = self._jump_forward()
             consume = True
         elif event.key == "tab":
@@ -100,6 +100,7 @@ class SurfView(VerticalScroll):
         if not self._session.cycle_neighbor(delta):
             return False
         self.refresh_from_session()
+        self._scroll_cursor_into_view()
         return True
 
     def _hop(self) -> bool:
@@ -108,6 +109,7 @@ class SurfView(VerticalScroll):
         if not self._session.hop():
             return False
         self.refresh_from_session()
+        self._scroll_cursor_into_view()
         return True
 
     def _activate_enter(self) -> bool:
@@ -123,6 +125,7 @@ class SurfView(VerticalScroll):
         if not self._session.jump_back():
             return False
         self.refresh_from_session()
+        self._scroll_cursor_into_view()
         return True
 
     def _jump_forward(self) -> bool:
@@ -131,6 +134,7 @@ class SurfView(VerticalScroll):
         if not self._session.jump_forward():
             return False
         self.refresh_from_session()
+        self._scroll_cursor_into_view()
         return True
 
     def _toggle_kind(self) -> bool:
@@ -139,7 +143,16 @@ class SurfView(VerticalScroll):
         if not self._session.toggle_kind():
             return False
         self.refresh_from_session()
+        self._scroll_cursor_into_view()
         return True
+
+    def _scroll_cursor_into_view(self) -> None:
+        session = self._session
+        if session is None:
+            return
+        target_y = _selected_line(session)
+        scroll_y = max(0, target_y - max(1, self.size.height) // 2)
+        self.call_after_refresh(lambda: self.scroll_to(y=scroll_y, animate=False))
 
     def action_expand(self) -> None:
         self._expand_focus()
@@ -205,6 +218,26 @@ def _node_by_id(session: SurfSession, node_id: int | None) -> GraphNode | None:
         if node.id == node_id:
             return node
     return None
+
+
+def _selected_line(session: SurfSession) -> int:
+    if session.neighbor_index < 0:
+        return 3
+
+    focus = session.focus_node()
+    props_offset = 1 if focus is not None and focus.properties else 0
+    neighbors = session.neighbors()
+    if session.neighbor_index >= len(neighbors):
+        return 3
+    outbound = [entry for entry in neighbors if entry.direction == "out"]
+    selected = neighbors[session.neighbor_index]
+    if selected.direction == "out":
+        out_index = sum(1 for entry in neighbors[: session.neighbor_index] if entry.direction == "out")
+        return 6 + props_offset + out_index
+
+    in_index = sum(1 for entry in neighbors[: session.neighbor_index] if entry.direction == "in")
+    out_lines = len(outbound) if outbound else 1
+    return 8 + props_offset + out_lines + in_index
 
 
 def _node_cell(node: GraphNode) -> CellValue:

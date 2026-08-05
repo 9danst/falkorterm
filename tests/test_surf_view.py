@@ -119,6 +119,24 @@ async def test_h_and_ctrl_i_move_jump_history():
         assert session.focus_id == 2
 
 
+async def test_shift_l_moves_jump_history_forward():
+    session = _session()
+    session.cycle_neighbor(1)
+    session.hop()
+    session.jump_back()
+    app = SurfApp()
+    async with app.run_test(size=(100, 30)) as pilot:
+        surf = app.query_one("#surf", SurfView)
+        surf.set_session(session)
+        surf.focus()
+        await pilot.pause()
+
+        await pilot.press("L")
+        await pilot.pause()
+
+        assert session.focus_id == 2
+
+
 async def test_ctrl_o_with_no_history_is_consumed_by_surf():
     session = _session()
     app = SurfWithGlobalOpenApp()
