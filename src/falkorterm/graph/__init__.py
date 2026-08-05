@@ -13,6 +13,8 @@ from falkorterm.graph.models import (
     Hitbox,
     NodePose,
 )
+from falkorterm.graph.render_surf import render_surf
+from falkorterm.graph.session import SurfSession
 
 __all__ = [
     "EMPTY_MESSAGE",
@@ -31,4 +33,6 @@ __all__ = [
     "layout_ascii",
     "layout_coords",
     "merge_graphs",
+    "render_surf",
+    "SurfSession",
 ]
