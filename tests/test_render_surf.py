@@ -13,10 +13,15 @@ def _n(i: int, name: str | None = None, **props: object) -> GraphNode:
     )
 
 
-def _model(*nodes: GraphNode, edges: tuple[GraphEdge, ...] = ()) -> GraphViewModel:
+def _model(
+    *nodes: GraphNode,
+    edges: tuple[GraphEdge, ...] = (),
+    truncated: bool = False,
+) -> GraphViewModel:
     return GraphViewModel(
         nodes=nodes,
         edges=edges,
+        truncated=truncated,
         total_nodes=len(nodes),
         total_edges=len(edges),
     )
@@ -70,6 +75,15 @@ def test_render_emphasizes_selected_edge_kind():
     assert "«KNOWS»" in plain
 
 
+def test_render_header_marks_truncated_model():
+    s = SurfSession()
+    s.seed(_model(_n(1, "Alice"), truncated=True))
+
+    plain = render_surf(s).plain
+
+    assert "session: 1 nodes · 0 edges · truncated" in plain
+
+
 def test_render_trail_uses_last_six_jump_entries_with_edge_types():
     s = SurfSession()
     s.seed(
@@ -102,3 +116,27 @@ def test_render_trail_uses_last_six_jump_entries_with_edge_types():
     assert "n2" in plain.splitlines()[0]
     assert "[:R23]" in plain
     assert "[:R67]" in plain
+
+
+def test_render_trail_respects_jump_index_after_jump_back():
+    s = SurfSession()
+    s.seed(
+        _model(
+            _n(1, "Alice"),
+            _n(2, "Bob"),
+            _n(3, "Carol"),
+            edges=(
+                GraphEdge(1, 2, "KNOWS"),
+                GraphEdge(2, 3, "FOLLOWS"),
+            ),
+        )
+    )
+    s.cycle_neighbor(+1)
+    s.hop()
+    s.cycle_neighbor(+1)
+    s.hop()
+    s.jump_back()
+
+    trail = render_surf(s).plain.splitlines()[0]
+
+    assert trail == "trail: Alice → [:KNOWS] → Bob"
