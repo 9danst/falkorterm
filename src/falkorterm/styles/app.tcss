@@ -12,6 +12,7 @@ Header {
 }
 
 ContextWidget {
+    layout: vertical;
     width: 1fr;
     max-width: 28%;
     height: 1fr;
@@ -95,18 +96,55 @@ StatusBar .status-run {
     color: $warning;
 }
 
+ContextWidget #context-logo {
+    height: auto;
+    padding-bottom: 1;
+    align: center middle;
+}
+
+ContextWidget #logo-letters {
+    height: auto;
+    width: auto;
+    align: center middle;
+}
+
+ContextWidget .logo-f {
+    color: $accent;
+    width: auto;
+    height: auto;
+}
+
+ContextWidget .logo-t {
+    color: $secondary;
+    width: auto;
+    height: auto;
+}
+
+ContextWidget .logo-tagline {
+    color: $text-muted;
+    text-align: center;
+    height: 1;
+    width: 1fr;
+}
+
+ContextWidget #graph-summary {
+    height: auto;
+    border: round $primary 40%;
+    padding: 0 1;
+    margin-bottom: 1;
+    color: $text-muted;
+}
+
 ContextWidget Collapsible {
+    height: 1fr;
     padding-bottom: 0;
     padding-left: 0;
     border-top: tall $primary 40%;
     background: transparent;
 }
 
-ContextWidget Collapsible:first-of-type {
-    border-top: none;
-}
-
 ContextWidget Collapsible > Contents {
+    height: 1fr;
     padding: 0 0 0 1;
 }
 
@@ -129,8 +167,8 @@ ContextWidget .schema-count {
 }
 
 ContextWidget ListView {
-    height: auto;
-    max-height: 12;
+    height: 1fr;
+    max-height: 1fr;
     background: transparent;
 }
 

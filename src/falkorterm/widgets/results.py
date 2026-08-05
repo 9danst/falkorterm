@@ -9,10 +9,12 @@ from textual.widgets import DataTable, Label, Static
 
 from falkorterm.client.models import CellValue, QueryResult
 from falkorterm.graph.extract import extract_graph
+from falkorterm.graph.render_surf import surf_hint
 from falkorterm.graph.session import SurfSession
 
 GRAPH_HINT = "g table/ascii/surf · ↑↓ · Enter · x expand · c copy"
 SURF_HINT = "g table/ascii/surf · j/k · l hop · h/Ctrl+o back · L forward · Tab · x · c"
+_FOCUS_TITLE_MAX = 24
 TabId = Literal["table", "graph", "surf"]
 
 
@@ -251,9 +253,8 @@ class ResultsWidget(Static):
                 f"{elapsed} · {GRAPH_HINT}" if elapsed else GRAPH_HINT
             )
         elif self._mode == "surf":
-            self.border_subtitle = (
-                f"{elapsed} · {SURF_HINT}" if elapsed else SURF_HINT
-            )
+            hint = self._surf_hint_text()
+            self.border_subtitle = f"{elapsed} · {hint}" if elapsed else hint
         else:
             self.border_subtitle = elapsed or ""
 
@@ -261,14 +262,24 @@ class ResultsWidget(Static):
         if self._mode == "graph":
             return " · graph"
         if self._mode == "surf":
-            return " · surf"
+            tag = " · surf"
+            focus = self._surf.focus_node()
+            if focus is not None:
+                display = (focus.display or f"id={focus.id}")[:_FOCUS_TITLE_MAX]
+                tag += f" · {display}"
+            return tag
         return ""
+
+    def _surf_hint_text(self) -> str:
+        if self._surf.model is None:
+            return SURF_HINT
+        return surf_hint(self._surf)
 
     def _active_hint(self) -> str:
         if self._mode == "graph":
             return GRAPH_HINT
         if self._mode == "surf":
-            return SURF_HINT
+            return self._surf_hint_text()
         return ""
 
     @property

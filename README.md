@@ -95,6 +95,8 @@ El default es **flux-3** (fucsia / magenta / ámbar). También están `flux-1` (
 | `x` (detail / grafo) | Expandir vecinos del nodo (inserta Cypher y ejecuta) |
 | `j`/`k`, `l`, `h`/`Ctrl+o`, `L`, `Tab` (en Surf) | Mover cursor, saltar, volver/avanzar historial y alternar nodo/arista |
 
+Surf es un inspector ego-hop denso (caja FOCUS, OUT/IN alineados, panel `selected`, hints contextuales); no pinta el grafo completo en ASCII.
+
 Para pegar fuera del terminal en Wayland hace falta [`wl-clipboard`](https://github.com/bugaevc/wl-clipboard) (`wl-copy`); en X11, `xclip` o `xsel`. Sin eso, OSC 52 suele fallar (p. ej. en Cursor).
 
 ## Tests

@@ -81,11 +81,43 @@ async def test_g_cycles_table_graph_surf():
         surf = results.query_one("#surf-view", SurfView)
         surf_canvas = str(surf.query_one("#surf-canvas", Static).render())
         assert "FOCUS" in surf_canvas
+        assert "┏" in surf_canvas
         assert "id=1" in surf_canvas
+        assert " · surf · " in results.border_title
+        assert "j/k neighbor" in (results.border_subtitle or "")
 
         await pilot.press("g")
         await pilot.pause()
         assert results.mode == "table"
+
+
+async def test_surf_chrome_hint_updates_when_neighbor_selected():
+    app = GraphHarness()
+    async with app.run_test(size=(120, 40)) as pilot:
+        results = app.query_one("#results", ResultsWidget)
+        results.show_result(
+            QueryResult(
+                columns=("a", "r", "b"),
+                rows=((_node(1), _edge(1, 2), _node(2)),),
+                total_rows=1,
+                elapsed_ms=4.0,
+            )
+        )
+        await pilot.pause()
+        results.action_toggle_graph()  # graph
+        results.action_toggle_graph()  # surf
+        await pilot.pause()
+
+        assert "j/k neighbor" in (results.border_subtitle or "")
+
+        surf = results.query_one("#surf-view", SurfView)
+        surf.focus()
+        await pilot.pause()
+        await pilot.press("j")
+        await pilot.pause()
+
+        assert "l hop" in (results.border_subtitle or "")
+        assert "Tab edge" in (results.border_subtitle or "")
 
 
 async def test_graph_empty_for_scalars():
@@ -258,3 +290,54 @@ async def test_c_copies_ascii_from_graph():
         assert app.clipboard_log
         assert "id=1" in app.clipboard_log[-1]
         assert "id=2" in app.clipboard_log[-1]
+
+
+def _chain_result(n: int = 6) -> QueryResult:
+    """Path of n nodes → n-1 layered edges (wide ASCII)."""
+    cols = tuple(f"c{i}" for i in range(2 * n - 1))
+    cells: list[CellValue] = []
+    for i in range(1, n + 1):
+        cells.append(_node(i))
+        if i < n:
+            cells.append(_edge(i, i + 1, f"R{i}"))
+    return QueryResult(columns=cols, rows=(tuple(cells),), total_rows=1)
+
+
+async def test_graph_allows_horizontal_overflow_scroll():
+    app = GraphHarness()
+    async with app.run_test(size=(40, 24)) as pilot:
+        results = app.query_one("#results", ResultsWidget)
+        results.show_result(_chain_result(6))
+        await pilot.pause()
+        results.action_toggle_graph()
+        await pilot.pause()
+        graph = results.query_one("#graph-view", GraphResultView)
+        assert str(graph.styles.overflow_x) == "auto"
+        assert graph.max_scroll_x > 0
+
+
+async def test_graph_selection_scrolls_horizontally_into_view():
+    app = GraphHarness()
+    async with app.run_test(size=(40, 24)) as pilot:
+        results = app.query_one("#results", ResultsWidget)
+        results.show_result(_chain_result(6))
+        await pilot.pause()
+        results.action_toggle_graph()
+        await pilot.pause()
+        graph = results.query_one("#graph-view", GraphResultView)
+        graph.focus()
+        await pilot.pause()
+        assert graph.scroll_x == 0
+
+        # Cycle until a far-right node is selected (last in layered order).
+        for _ in range(len(graph._node_order) - 1):
+            await pilot.press("j")
+            await pilot.pause()
+
+        assert graph.scroll_x > 0
+        selected = graph._selected_id()
+        assert selected is not None
+        hb = next(h for h in graph._hitboxes if h.node_id == selected)
+        # Selected node left edge should be within viewport (+ small margin).
+        assert hb.x0 < graph.scroll_x + graph.size.width
+        assert hb.x1 > graph.scroll_x

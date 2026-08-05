@@ -13,7 +13,7 @@ from falkorterm.graph.models import (
     Hitbox,
     NodePose,
 )
-from falkorterm.graph.render_surf import render_surf
+from falkorterm.graph.render_surf import render_surf, surf_hint
 from falkorterm.graph.session import SurfSession
 
 __all__ = [
@@ -26,6 +26,7 @@ __all__ = [
     "GraphViewModel",
     "Hitbox",
     "NodePose",
+    "SurfSession",
     "color_for",
     "edge_key",
     "extract_graph",
@@ -34,5 +35,5 @@ __all__ = [
     "layout_coords",
     "merge_graphs",
     "render_surf",
-    "SurfSession",
+    "surf_hint",
 ]

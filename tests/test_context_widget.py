@@ -1,8 +1,8 @@
-from falkorterm.client.models import GraphSchema
+from falkorterm.client.models import ConnectionConfig, GraphSchema
 from falkorterm.widgets.context import ContextWidget, SchemaItemSelected
 from falkorterm.widgets.query import QueryWidget
 from textual.app import App, ComposeResult
-from textual.widgets import Collapsible, Label
+from textual.widgets import Collapsible, Label, Static
 
 
 class ContextHarness(App):
@@ -32,6 +32,61 @@ def _item_name_and_count(item) -> tuple[str, str | None]:
     if not count_labels:
         return name, None
     return name, str(count_labels.first().content)
+
+
+def _summary_text(context: ContextWidget) -> str:
+    return str(context.query_one("#graph-summary", Static).content)
+
+
+async def test_context_logo_and_default_summary():
+    app = ContextHarness()
+    async with app.run_test() as pilot:
+        context = app.query_one("#context", ContextWidget)
+        await pilot.pause()
+        assert context.query_one(".logo-f", Static)
+        assert context.query_one(".logo-t", Static)
+        tagline = str(context.query_one(".logo-tagline", Label).content)
+        assert "falkorTerm" in tagline
+        assert "1.0" in tagline
+        summary = _summary_text(context)
+        assert "Not connected" in summary
+        assert "nodes ~0" in summary
+        assert "edges 0" in summary
+
+
+async def test_context_graph_summary_with_connection():
+    app = ContextHarness()
+    async with app.run_test() as pilot:
+        context = app.query_one("#context", ContextWidget)
+        context.set_connection(
+            ConnectionConfig(host="localhost", port=6379, graph="aviation")
+        )
+        context.set_schema(
+            GraphSchema(
+                labels=("Person", "City"),
+                relations=("KNOWS",),
+                property_keys=("name", "age"),
+                label_counts=(("Person", 40), ("City", 2)),
+                relation_counts=(("KNOWS", 17),),
+            )
+        )
+        await pilot.pause()
+        summary = _summary_text(context)
+        assert "aviation@localhost:6379" in summary
+        assert "nodes ~42" in summary
+        assert "edges 17" in summary
+        assert "labels 2" in summary
+        assert "rels 1" in summary
+        assert "props 2" in summary
+        assert "read-only" not in summary
+
+        context.set_connection(
+            ConnectionConfig(
+                host="localhost", port=6379, graph="aviation", read_only=True
+            )
+        )
+        await pilot.pause()
+        assert "mode read-only" in _summary_text(context)
 
 
 async def test_context_set_schema_and_select_label():
@@ -97,6 +152,9 @@ async def test_context_empty_schema_shows_empty_states():
         assert not context.query_one("#labels-list").display
         assert context.border_title == "Context · 0"
         assert context.query_one("#labels-section", Collapsible).title == "Labels · 0"
+        summary = _summary_text(context)
+        assert "Not connected" in summary
+        assert "nodes ~0" in summary
 
 
 async def test_context_sections_expanded_by_default():

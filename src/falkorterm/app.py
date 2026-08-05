@@ -348,10 +348,12 @@ class FalkorTerm(App):
         self.query_one("#query", QueryWidget).configure_history(
             self.history_store, result.display_target
         )
+        self.query_one("#context", ContextWidget).set_connection(result)
         self._load_schema()
 
     def _load_schema(self) -> None:
         context = self.query_one("#context", ContextWidget)
+        context.set_connection(self.config)
         try:
             schema = self.client.get_schema()
             context.set_schema(schema)

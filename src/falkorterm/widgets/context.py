@@ -4,11 +4,14 @@ from typing import Literal
 
 from textual.actions import SkipAction
 from textual.binding import Binding
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import Collapsible, Label, ListItem, ListView, Static
 
-from falkorterm.client.models import GraphSchema
+from falkorterm.client.models import ConnectionConfig, GraphSchema
+
+_LOGO_F = "███╗\n█╔═╝\n█║  "
+_LOGO_T = "████╗\n╚═█╔╝\n  █║"
 
 
 class SchemaItemSelected(Message):
@@ -57,8 +60,15 @@ class ContextWidget(Static):
         self.border_title = "Context"
         self.border_subtitle = "Enter match · c count"
         self._schema = GraphSchema(labels=(), relations=())
+        self._config: ConnectionConfig | None = None
 
     def compose(self):
+        with Vertical(id="context-logo"):
+            with Horizontal(id="logo-letters"):
+                yield Static(_LOGO_F, classes="logo-f")
+                yield Static(_LOGO_T, classes="logo-t")
+            yield Label("falkorTerm · 1.0", classes="logo-tagline")
+        yield Static(id="graph-summary")
         with Collapsible(
             title="Labels · 0", id="labels-section", collapsed=False
         ):
@@ -79,6 +89,10 @@ class ContextWidget(Static):
 
     def on_mount(self) -> None:
         self.set_schema(self._schema)
+
+    def set_connection(self, config: ConnectionConfig | None) -> None:
+        self._config = config
+        self._refresh_summary()
 
     def set_schema(self, schema: GraphSchema) -> None:
         self._schema = schema
@@ -125,6 +139,30 @@ class ContextWidget(Static):
         total = n_labels + n_relations + n_props
         self.border_title = f"Context · {total}"
         self.border_subtitle = "Enter match · c count"
+        self._refresh_summary()
+
+    def _refresh_summary(self) -> None:
+        summary = self.query_one("#graph-summary", Static)
+        schema = self._schema
+        n_labels = len(schema.labels)
+        n_relations = len(schema.relations)
+        n_props = len(schema.property_keys)
+        nodes = sum(c for _, c in schema.label_counts)
+        edges = sum(c for _, c in schema.relation_counts)
+
+        if self._config is None:
+            target = "Not connected"
+        else:
+            target = self._config.display_target
+
+        lines = [
+            f"[bold]{target}[/bold]",
+            f"nodes ~{nodes} · edges {edges}",
+            f"labels {n_labels} · rels {n_relations} · props {n_props}",
+        ]
+        if self._config is not None and self._config.read_only:
+            lines.append("mode read-only")
+        summary.update("\n".join(lines))
 
     def _focused_schema_item(self) -> SchemaListItem | None:
         for list_id in ("#labels-list", "#relations-list", "#properties-list"):

@@ -51,17 +51,26 @@ class SurfView(VerticalScroll):
     def clear_session(self) -> None:
         self._session = None
         self.query_one("#surf-canvas", Static).update(EMPTY_MESSAGE)
+        self._refresh_parent_chrome()
 
     def show_error(self, message: str) -> None:
         self._session = None
         self.query_one("#surf-canvas", Static).update(message)
+        self._refresh_parent_chrome()
 
     def refresh_from_session(self) -> None:
         canvas = self.query_one("#surf-canvas", Static)
         if self._session is None:
             canvas.update(EMPTY_MESSAGE)
-            return
-        canvas.update(render_surf(self._session))
+        else:
+            canvas.update(render_surf(self._session))
+        self._refresh_parent_chrome()
+
+    def _refresh_parent_chrome(self) -> None:
+        parent = self.parent
+        refresh = getattr(parent, "_refresh_chrome", None)
+        if callable(refresh):
+            refresh()
 
     def on_key(self, event) -> None:  # type: ignore[no-untyped-def]
         consume = False
