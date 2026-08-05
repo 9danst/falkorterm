@@ -1,4 +1,5 @@
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.widgets import Static
 
 from falkorterm.client.models import CellValue
@@ -47,6 +48,17 @@ class SurfApp(App[None]):
 
     def copy_to_clipboard(self, text: str, *, what: str = "text") -> None:  # type: ignore[override]
         self.clipboard_log.append(text)
+
+
+class SurfWithGlobalOpenApp(SurfApp):
+    BINDINGS = [Binding("ctrl+o", "open_connection", "Connect")]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.opened = 0
+
+    def action_open_connection(self) -> None:
+        self.opened += 1
 
 
 async def test_j_cycles_neighbor_and_enter_hops():
@@ -105,6 +117,23 @@ async def test_h_and_ctrl_i_move_jump_history():
         await pilot.press("ctrl+i")
         await pilot.pause()
         assert session.focus_id == 2
+
+
+async def test_ctrl_o_with_no_history_is_consumed_by_surf():
+    session = _session()
+    app = SurfWithGlobalOpenApp()
+    async with app.run_test(size=(100, 30)) as pilot:
+        surf = app.query_one("#surf", SurfView)
+        surf.set_session(session)
+        surf.focus()
+        await pilot.pause()
+
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+
+        assert session.focus_id == 1
+        assert session.jump_index == 0
+        assert app.opened == 0
 
 
 async def test_tab_toggles_kind_and_rerenders_edge_selection():

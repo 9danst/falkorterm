@@ -64,6 +64,7 @@ class SurfView(VerticalScroll):
         canvas.update(render_surf(self._session))
 
     def on_key(self, event) -> None:  # type: ignore[no-untyped-def]
+        consume = False
         if event.key in {"down", "j"}:
             handled = self._cycle_neighbor(1)
         elif event.key in {"up", "k"}:
@@ -72,10 +73,14 @@ class SurfView(VerticalScroll):
             handled = self._hop()
         elif event.key == "enter":
             handled = self._activate_enter()
-        elif event.key in {"h", "ctrl+o"}:
+        elif event.key == "h":
             handled = self._jump_back()
+        elif event.key == "ctrl+o":
+            handled = self._jump_back()
+            consume = True
         elif event.key == "ctrl+i":
             handled = self._jump_forward()
+            consume = True
         elif event.key == "tab":
             handled = self._toggle_kind()
         elif event.key == "x":
@@ -85,7 +90,7 @@ class SurfView(VerticalScroll):
         else:
             return
 
-        if handled:
+        if handled or consume:
             event.prevent_default()
             event.stop()
 
