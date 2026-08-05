@@ -8,9 +8,12 @@ from textual.message import Message
 from textual.widgets import DataTable, Label, Static
 
 from falkorterm.client.models import CellValue, QueryResult
+from falkorterm.graph.extract import extract_graph
+from falkorterm.graph.session import SurfSession
 
 GRAPH_HINT = "g table/graph · ↑↓ · Enter · x expand · c copy"
-TabId = Literal["table", "graph"]
+SURF_HINT = "g table/ascii/surf · j/k · l hop · h back · Tab · x · c"
+TabId = Literal["table", "graph", "surf"]
 
 
 def format_elapsed_ms(elapsed_ms: float | None) -> str | None:
@@ -151,7 +154,7 @@ class TableResultView(Vertical):
 
 
 class ResultsWidget(Static):
-    """Results panel with table / ASCII graph toggle."""
+    """Results panel with table / ASCII graph / surf modes."""
 
     BINDINGS = [
         Binding("y", "copy_cell", "Copy cell", show=False),
@@ -165,52 +168,76 @@ class ResultsWidget(Static):
         self.border_title = "Results"
         self._last_result: QueryResult | None = None
         self._mode: TabId = "table"
+        self._surf = SurfSession()
+        self._pending_expand_merge = False
+        self._pending_expand_node_id: int | None = None
 
     def compose(self):
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         yield TableResultView(id="table-view")
         yield GraphResultView(id="graph-view")
+        yield SurfView(id="surf-view")
 
     def on_mount(self) -> None:
         self._apply_mode_visibility()
 
     def prepare_manual_query(self) -> None:
-        """Compatibility no-op (session merge removed in ASCII v1 restore)."""
+        """Mark the next result as a fresh manual query for Surf."""
+        self._pending_expand_merge = False
+        self._pending_expand_node_id = None
 
-    def begin_expand_merge(self, node_id: int) -> None:  # noqa: ARG002
-        """Compatibility no-op; expand still runs a query that replaces the result."""
+    def begin_expand_merge(self, node_id: int) -> None:
+        """Mark the next result as an expansion to merge into Surf."""
+        self._pending_expand_merge = True
+        self._pending_expand_node_id = node_id
 
     @property
     def graph_focus_id(self) -> int | None:
-        return None
+        return self._surf.focus_id
 
     def show_result(self, result: QueryResult) -> None:
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         self._last_result = result
         self.query_one("#table-view", TableResultView).show_result(result)
         self.query_one("#graph-view", GraphResultView).show_result(result)
+        incoming = extract_graph(result)
+        if self._pending_expand_merge:
+            self._surf.merge(incoming)
+            self._restore_expand_focus()
+            self._pending_expand_merge = False
+            self._pending_expand_node_id = None
+        else:
+            self._surf.seed(incoming)
+        self.query_one("#surf-view", SurfView).set_session(self._surf)
         self._refresh_chrome()
         self._apply_mode_visibility()
 
     def show_error(self, message: str) -> None:
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         self._last_result = None
+        self._pending_expand_merge = False
+        self._pending_expand_node_id = None
+        self._surf.clear()
         self.query_one("#table-view", TableResultView).show_error(message)
         self.query_one("#graph-view", GraphResultView).show_error(message)
-        mode_tag = " · graph" if self._mode == "graph" else ""
+        self.query_one("#surf-view", SurfView).show_error(message)
+        mode_tag = self._mode_tag()
         self.border_title = f"Results · error{mode_tag}"
         self.border_subtitle = ""
         self._apply_mode_visibility()
 
     def _refresh_chrome(self) -> None:
         result = self._last_result
-        mode_tag = " · graph" if self._mode == "graph" else ""
+        mode_tag = self._mode_tag()
         if result is None:
             self.border_title = f"Results{mode_tag}"
-            self.border_subtitle = GRAPH_HINT if self._mode == "graph" else ""
+            self.border_subtitle = self._active_hint()
             return
         n = result.total_rows
         shown = len(result.rows)
@@ -223,8 +250,26 @@ class ResultsWidget(Static):
             self.border_subtitle = (
                 f"{elapsed} · {GRAPH_HINT}" if elapsed else GRAPH_HINT
             )
+        elif self._mode == "surf":
+            self.border_subtitle = (
+                f"{elapsed} · {SURF_HINT}" if elapsed else SURF_HINT
+            )
         else:
             self.border_subtitle = elapsed or ""
+
+    def _mode_tag(self) -> str:
+        if self._mode == "graph":
+            return " · graph"
+        if self._mode == "surf":
+            return " · surf"
+        return ""
+
+    def _active_hint(self) -> str:
+        if self._mode == "graph":
+            return GRAPH_HINT
+        if self._mode == "surf":
+            return SURF_HINT
+        return ""
 
     @property
     def last_result(self) -> QueryResult | None:
@@ -235,45 +280,71 @@ class ResultsWidget(Static):
         return self._mode
 
     def action_toggle_graph(self) -> None:
-        self._mode = "graph" if self._mode == "table" else "table"
+        order: tuple[TabId, ...] = ("table", "graph", "surf")
+        self._mode = order[(order.index(self._mode) + 1) % len(order)]
         self._apply_mode_visibility()
         self._refresh_chrome()
         self.focus_active_view()
 
     def focus_active_view(self) -> None:
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         if self._mode == "graph":
             self.query_one("#graph-view", GraphResultView).focus()
+        elif self._mode == "surf":
+            self.query_one("#surf-view", SurfView).focus()
         else:
             self.query_one("#results-table", DataTable).focus()
 
     def _apply_mode_visibility(self) -> None:
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         table = self.query_one("#table-view", TableResultView)
         graph = self.query_one("#graph-view", GraphResultView)
+        surf = self.query_one("#surf-view", SurfView)
         table.display = self._mode == "table"
         graph.display = self._mode == "graph"
+        surf.display = self._mode == "surf"
+
+    def _restore_expand_focus(self) -> None:
+        node_id = self._pending_expand_node_id
+        if self._surf.model is None or node_id is None:
+            return
+        if any(node.id == node_id for node in self._surf.model.nodes):
+            self._surf.focus_id = node_id
+            self._surf.neighbor_index = -1
+            self._surf.select_kind = "node"
 
     def action_copy_cell(self) -> None:
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         if self._mode == "graph":
             self.query_one("#graph-view", GraphResultView).copy_selected()
+        elif self._mode == "surf":
+            self.query_one("#surf-view", SurfView).copy_selection()
         else:
             self.query_one("#table-view", TableResultView).copy_cell()
 
     def action_copy_row(self) -> None:
+        from falkorterm.widgets.surf import SurfView
+
         if self._mode == "table":
             self.query_one("#table-view", TableResultView).copy_row()
+        elif self._mode == "surf":
+            self.query_one("#surf-view", SurfView).copy_selection()
 
     def action_copy_graph(self) -> None:
         from textual.actions import SkipAction
 
         from falkorterm.widgets.graph import GraphResultView
+        from falkorterm.widgets.surf import SurfView
 
         if self._mode == "graph":
             self.query_one("#graph-view", GraphResultView).copy_canvas()
+        elif self._mode == "surf":
+            self.query_one("#surf-view", SurfView).copy_canvas()
         else:
             raise SkipAction()

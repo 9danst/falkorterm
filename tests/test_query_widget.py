@@ -33,7 +33,7 @@ async def test_set_running_toggles_title_and_class():
     async with app.run_test() as pilot:
         query = app.query_one("#query", QueryWidget)
         assert query.border_title == "Cypher query"
-        assert query.border_subtitle == "Ctrl+Enter · ↑↓ history"
+        assert query.border_subtitle == "Ctrl+Enter · ↑↓ history · F4 help"
         assert not query.has_class("running")
 
         query.set_running(True)
@@ -45,7 +45,7 @@ async def test_set_running_toggles_title_and_class():
         query.set_running(False)
         await pilot.pause()
         assert query.border_title == "Cypher query"
-        assert query.border_subtitle == "Ctrl+Enter · ↑↓ history"
+        assert query.border_subtitle == "Ctrl+Enter · ↑↓ history · F4 help"
         assert not query.has_class("running")
 
 

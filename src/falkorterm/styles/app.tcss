@@ -161,7 +161,16 @@ GraphResultView {
     height: 1fr;
 }
 
+SurfView {
+    height: 1fr;
+}
+
 #graph-canvas {
+    height: auto;
+    width: auto;
+}
+
+#surf-canvas {
     height: auto;
     width: auto;
 }

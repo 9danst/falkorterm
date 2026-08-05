@@ -6,6 +6,7 @@ from falkorterm.explore import ExpandNeighborsRequested
 from falkorterm.graph.colors import EMPTY_MESSAGE
 from falkorterm.widgets.graph import GraphResultView
 from falkorterm.widgets.results import GRAPH_HINT, CellInspectRequested, ResultsWidget
+from falkorterm.widgets.surf import SurfView
 
 
 def _node(nid: int, label: str = "Person") -> CellValue:
@@ -49,7 +50,7 @@ class GraphHarness(App):
         self.expanded_id = event.node_id
 
 
-async def test_g_toggles_table_and_graph():
+async def test_g_cycles_table_graph_surf():
     app = GraphHarness()
     async with app.run_test(size=(120, 40)) as pilot:
         results = app.query_one("#results", ResultsWidget)
@@ -76,6 +77,14 @@ async def test_g_toggles_table_and_graph():
 
         await pilot.press("g")
         await pilot.pause()
+        assert results.mode == "surf"
+        surf = results.query_one("#surf-view", SurfView)
+        surf_canvas = str(surf.query_one("#surf-canvas", Static).render())
+        assert "FOCUS" in surf_canvas
+        assert "id=1" in surf_canvas
+
+        await pilot.press("g")
+        await pilot.pause()
         assert results.mode == "table"
 
 
@@ -99,6 +108,55 @@ async def test_graph_empty_for_scalars():
             .render()
         )
         assert EMPTY_MESSAGE in canvas
+
+
+async def test_manual_query_seeds_surf_expand_merges_ascii_replaces():
+    app = GraphHarness()
+    async with app.run_test(size=(120, 40)) as pilot:
+        results = app.query_one("#results", ResultsWidget)
+        results.show_result(
+            QueryResult(
+                columns=("a", "r", "b"),
+                rows=((_node(1), _edge(1, 2), _node(2)),),
+                total_rows=1,
+            )
+        )
+        await pilot.pause()
+
+        surf = results.query_one("#surf-view", SurfView)
+        assert surf._session is not None
+        assert surf._session.model is not None
+        assert {node.id for node in surf._session.model.nodes} == {1, 2}
+
+        results.begin_expand_merge(1)
+        results.show_result(
+            QueryResult(
+                columns=("a", "r", "b"),
+                rows=((_node(1), _edge(1, 3, "LIKES"), _node(3)),),
+                total_rows=1,
+            )
+        )
+        await pilot.pause()
+
+        assert surf._session.model is not None
+        assert {node.id for node in surf._session.model.nodes} == {1, 2, 3}
+        graph = results.query_one("#graph-view", GraphResultView)
+        assert graph._model is not None
+        assert {node.id for node in graph._model.nodes} == {1, 3}
+
+        results.begin_expand_merge(1)
+        results.prepare_manual_query()
+        results.show_result(
+            QueryResult(
+                columns=("n",),
+                rows=((_node(4),),),
+                total_rows=1,
+            )
+        )
+        await pilot.pause()
+
+        assert surf._session.model is not None
+        assert {node.id for node in surf._session.model.nodes} == {4}
 
 
 async def test_graph_enter_inspects_node():
