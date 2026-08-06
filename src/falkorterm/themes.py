@@ -93,5 +93,43 @@ FLUX_3 = Theme(
     variables=_flux_variables(accent=_FLUX_3_ACCENT, primary=_FLUX_3_PRIMARY),
 )
 
-ALL_THEMES: tuple[Theme, ...] = (FLUX_3, FLUX_2, FLUX_1, FALKORTERM_THEME)
+# Luan — neon cyan/purple on pure black (cheat-sheet inspired)
+_LUAN_ACCENT = "#5CFFE7"
+_LUAN_PRIMARY = "#3D9EFF"
+LUAN = Theme(
+    name="luan",
+    primary=_LUAN_PRIMARY,
+    secondary="#B388FF",
+    accent=_LUAN_ACCENT,
+    warning="#FFB020",
+    error="#FF4D8D",
+    success="#7CFF6B",
+    foreground="#F5F7FA",
+    background="#000000",
+    surface="#0A0A0F",
+    panel="#12121A",
+    dark=True,
+    variables=_flux_variables(accent=_LUAN_ACCENT, primary=_LUAN_PRIMARY),
+)
+
+# Rhodia — Dotpad-inspired flat black/white with signature orange
+_RHODIA_ACCENT = "#FF6315"
+_RHODIA_PRIMARY = "#C8C8C8"
+RHODIA = Theme(
+    name="rhodia",
+    primary=_RHODIA_PRIMARY,
+    secondary="#FF8C42",
+    accent=_RHODIA_ACCENT,
+    warning="#F0E68C",
+    error="#FF4D4D",
+    success="#7CB87C",
+    foreground="#FFFFFF",
+    background="#000000",
+    surface="#0A0A0A",
+    panel="#141414",
+    dark=True,
+    variables=_flux_variables(accent=_RHODIA_ACCENT, primary=_RHODIA_PRIMARY),
+)
+
+ALL_THEMES: tuple[Theme, ...] = (FLUX_3, FLUX_2, FLUX_1, LUAN, RHODIA, FALKORTERM_THEME)
 DEFAULT_THEME_NAME = "flux-3"

@@ -1,11 +1,11 @@
 from falkorterm.app import FalkorTerm
 from falkorterm.client.models import ConnectionConfig, GraphSchema, QueryResult
-from falkorterm.themes import ALL_THEMES, DEFAULT_THEME_NAME, FLUX_1, FLUX_2, FLUX_3
+from falkorterm.themes import ALL_THEMES, DEFAULT_THEME_NAME, FLUX_1, FLUX_2, FLUX_3, LUAN, RHODIA
 
 
 def test_all_themes_registered_names() -> None:
     names = {t.name for t in ALL_THEMES}
-    assert names == {"falkorterm", "flux-1", "flux-2", "flux-3"}
+    assert names == {"falkorterm", "flux-1", "flux-2", "flux-3", "luan", "rhodia"}
 
 
 def test_default_theme_is_flux_3() -> None:
@@ -24,6 +24,23 @@ def test_flux_3_uses_amber_warning() -> None:
 
 def test_flux_2_uses_cyan_secondary() -> None:
     assert FLUX_2.secondary == "#00C8E0"
+
+
+def test_luan_is_dark_pure_black() -> None:
+    assert LUAN.dark is True
+    assert LUAN.background == "#000000"
+    assert LUAN.variables is not None
+    assert LUAN.variables["block-cursor-background"] == "#5CFFE7"
+    assert LUAN.variables["input-cursor-background"] == "#5CFFE7"
+
+
+def test_rhodia_is_dark_pure_black_with_orange_accent() -> None:
+    assert RHODIA.dark is True
+    assert RHODIA.background == "#000000"
+    assert RHODIA.accent == "#FF6315"
+    assert RHODIA.variables is not None
+    assert RHODIA.variables["block-cursor-background"] == "#FF6315"
+    assert RHODIA.variables["input-cursor-background"] == "#FF6315"
 
 
 class _FakeClient:

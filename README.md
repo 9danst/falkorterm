@@ -69,7 +69,7 @@ FALKOR_GRAPH=social FALKOR_HOST=127.0.0.1 uv run falkorterm
 
 ### Temas
 
-El default es **flux-3** (fucsia / magenta / ámbar). También están `flux-1` (solo fucsia), `flux-2` (fucsia + cyan) y `falkorterm` (teal). Cámbialos con la Command Palette de Textual (`Ctrl+P` → *Change theme*).
+El default es **flux-3** (fucsia / magenta / ámbar). También están `flux-1` (solo fucsia), `flux-2` (fucsia + cyan), `luan` (neón cyan/púrpura sobre negro), `rhodia` (negro/blanco + naranja Dotpad) y `falkorterm` (teal). Cámbialos con la Command Palette de Textual (`Ctrl+P` → *Change theme*).
 
 ### Atajos
 
