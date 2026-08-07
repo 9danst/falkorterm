@@ -381,10 +381,19 @@ def _draw_edge_label(
     span = x1 - x0 + 1
     if span < 2 or not label:
         return
-    text = label if len(label) <= span else label[: max(1, span - 1)] + "…"
+    inner_x0 = x0 + 1
+    inner_x1 = x1 - 1
+    inner_span = inner_x1 - inner_x0 + 1
+    if inner_span < 1:
+        inner_x0, inner_x1, inner_span = x0, x1, span
+    text = label if len(label) <= inner_span else label[: max(1, inner_span - 1)] + "…"
+    if inner_span >= len(text):
+        label_x = inner_x0 + max(0, (inner_span - len(text)) // 2)
+        canvas.label(label_x, y, text, style=style)
+        return
     label_y = y - 1 if y > 0 else y
     label_x = x0 + max(0, (span - len(text)) // 2)
-    canvas.label(label_x, label_y, text, style=None)
+    canvas.label(label_x, label_y, text, style=style)
 
 
 def _route_forward_adjacent(
@@ -529,7 +538,7 @@ def layout_ascii(
     max_box_h = max(box_heights.values(), default=4)
 
     max_label = max((len(e.type) for e in model.edges), default=8)
-    col_gap = max(12, max_label + 4)
+    col_gap = max(8, max_label + 2)
 
     col_widths: dict[int, int] = {}
     for layer_idx, ids in ordered.items():

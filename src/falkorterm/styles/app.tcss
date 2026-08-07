@@ -270,10 +270,14 @@ ConnectionScreen {
     margin-bottom: 1;
 }
 
+CellDetailScreen {
+    align: center middle;
+}
+
 #cell-detail-dialog {
-    width: 70;
-    height: auto;
-    max-height: 90%;
+    width: 84;
+    height: 36;
+    max-height: 92%;
     background: $surface;
     border: tall $accent;
     padding: 1 2;
@@ -282,19 +286,63 @@ ConnectionScreen {
 #cell-detail-title {
     text-style: bold;
     color: $accent;
-    margin-bottom: 1;
+    margin-bottom: 0;
+    height: auto;
+}
+
+#cell-detail-header {
+    color: $text;
+    margin-top: 0;
+    margin-bottom: 0;
+    height: auto;
+    padding: 0;
 }
 
 #cell-detail-display {
     color: $text-muted;
+    margin-top: 0;
+    margin-bottom: 1;
+    height: auto;
+}
+
+#cell-detail-tabs {
+    height: 1fr;
     margin-bottom: 1;
 }
 
-#cell-detail-body {
+#cell-detail-tabs ContentSwitcher {
+    height: 1fr;
+}
+
+#cell-detail-dialog TabPane {
+    height: 1fr;
+    padding: 1 0;
+}
+
+#cell-detail-props-scroll,
+#cell-detail-json-scroll {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#cell-detail-props {
     height: auto;
-    max-height: 30;
-    overflow-y: auto;
-    margin-bottom: 1;
+    min-height: 1;
+    padding: 1 0;
+}
+
+#cell-detail-props > .datatable--cursor {
+    background: $accent 30%;
+}
+
+#cell-detail-tree {
+    height: auto;
+    min-height: 1;
+    padding: 1 0;
+}
+
+#cell-detail-tree > .tree--cursor {
+    background: $accent 30%;
 }
 
 #cell-detail-actions {

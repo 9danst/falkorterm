@@ -67,10 +67,13 @@ async def test_cell_detail_copy():
             self.push_screen(CellDetailScreen(cell))
 
     h = Harness()
-    async with h.run_test(size=(100, 30)) as pilot:
+    async with h.run_test(size=(100, 40)) as pilot:
         await pilot.pause()
         screen = h.screen
         assert isinstance(screen, CellDetailScreen)
-        screen.action_copy()
+        from textual.widgets import Button
+
+        screen.query_one("#btn-copy-detail", Button).press()
+        await pilot.pause()
         assert '"kind": "node"' in h.clipboard_log[-1]
-        assert screen.copy_text().startswith("{")
+        assert screen.full_detail_text().startswith("{")

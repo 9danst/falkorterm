@@ -67,10 +67,29 @@ def test_layout_colors_only_borders_and_edge_strokes():
     assert color_for("ACTED_IN") in _style_at(canvas.rich, arrow_idx)
 
     edge_name_idx = plain.index("ACTED_IN")
-    assert color_for("ACTED_IN") not in _style_at(canvas.rich, edge_name_idx)
+    assert color_for("ACTED_IN") in _style_at(canvas.rich, edge_name_idx)
 
     assert "ACTED_IN" in plain
     assert "[:ACTED_IN]" not in plain
+
+
+def test_layout_edge_label_embedded_on_stroke_line():
+    model = GraphViewModel(
+        nodes=(
+            GraphNode(id=1, labels=("Person",), properties={}, display="(:Person id=1)"),
+            GraphNode(id=2, labels=("Movie",), properties={}, display="(:Movie id=2)"),
+        ),
+        edges=(GraphEdge(src=1, dest=2, type="ACTED_IN", id=9),),
+        total_nodes=2,
+        total_edges=1,
+    )
+    canvas = layout_ascii(model)
+    lines = canvas.text.splitlines()
+    stroke_line = next(line for line in lines if "ACTED_IN" in line and "▶" in line)
+    assert "─" in stroke_line or "▶" in stroke_line
+    label_line_idx = lines.index(stroke_line)
+    node_top_idx = next(i for i, line in enumerate(lines) if line.startswith("┌"))
+    assert label_line_idx > node_top_idx
 
 
 def test_layout_same_label_same_border_color():
