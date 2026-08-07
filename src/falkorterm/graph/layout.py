@@ -5,7 +5,10 @@ from collections import defaultdict, deque
 from rich.text import Text
 
 from falkorterm.graph.colors import EMPTY_MESSAGE, color_for
+from falkorterm.graph.display import GraphDisplayOptions, format_prop_line, props_for_node
 from falkorterm.graph.models import AsciiCanvas, GraphEdge, GraphNode, GraphViewModel, Hitbox
+
+NO_VISIBLE_MESSAGE = "No visible nodes — enable a label in display panel (p)"
 
 _PROP_KEYS = ("name", "title", "id", "label")
 _MAX_PROP_LEN = 16
@@ -62,11 +65,27 @@ def _display_prop(node: GraphNode) -> str | None:
     return None
 
 
-def _box_lines(node: GraphNode, selected: bool = False) -> list[str]:
+def _box_lines(
+    node: GraphNode,
+    selected: bool = False,
+    *,
+    display: GraphDisplayOptions | None = None,
+) -> list[str]:
     label = f":{':'.join(node.labels)}" if node.labels else "node"
-    id_line = f"id={node.id}"
-    prop = _display_prop(node)
-    inner_parts = [label, id_line] + ([prop] if prop else [])
+    inner_parts: list[str] = [label]
+    if display is None or display.show_id:
+        inner_parts.append(f"id={node.id}")
+    if display is None:
+        prop = _display_prop(node)
+        if prop:
+            inner_parts.append(prop)
+    else:
+        for key in props_for_node(node, display):
+            value = node.properties.get(key)
+            if value is not None:
+                inner_parts.append(
+                    format_prop_line(key, value, max_len=_MAX_PROP_LEN)
+                )
     inner_w = max(*(len(p) for p in inner_parts), 8)
     h, v = ("═", "║") if selected else ("─", "│")
     tl, tr, bl, br = (
@@ -480,6 +499,7 @@ def layout_ascii(
     *,
     selected_id: int | None = None,
     include_header: bool = True,
+    display: GraphDisplayOptions | None = None,
 ) -> AsciiCanvas:
     if not model.nodes:
         return AsciiCanvas(
@@ -500,7 +520,10 @@ def layout_ascii(
     ordered = _barycentric_order(by_layer_ids, layers, model.edges, max_layer)
 
     box_lines_cache = {
-        nid: _box_lines(nodes[nid], selected=(nid == selected_id)) for nid in nodes
+        nid: _box_lines(
+            nodes[nid], selected=(nid == selected_id), display=display
+        )
+        for nid in nodes
     }
     box_heights = {nid: len(lines) for nid, lines in box_lines_cache.items()}
     max_box_h = max(box_heights.values(), default=4)

@@ -255,6 +255,79 @@ async def test_graph_hint_and_copy():
         await pilot.pause()
         assert GRAPH_HINT in results.border_subtitle
         assert "↑↓" in results.border_subtitle
+        assert "p display" in results.border_subtitle
+
+
+async def test_display_panel_toggle_and_label_filter():
+    from falkorterm.widgets.graph_display_panel import GraphDisplayPanel
+
+    app = GraphHarness()
+    async with app.run_test(size=(120, 40)) as pilot:
+        results = app.query_one("#results", ResultsWidget)
+        results.show_result(
+            QueryResult(
+                columns=("a", "r", "b"),
+                rows=(
+                    (_node(1, "Person"), _edge(1, 2, "ACTED_IN"), _node(2, "Movie")),
+                ),
+                total_rows=1,
+            )
+        )
+        await pilot.pause()
+        results.action_toggle_graph()
+        await pilot.pause()
+        graph = results.query_one("#graph-view", GraphResultView)
+        graph.focus()
+        await pilot.pause()
+
+        panel = graph.query_one("#graph-display-panel", GraphDisplayPanel)
+        assert not panel.is_open()
+        await pilot.press("p")
+        await pilot.pause()
+        assert panel.is_open()
+
+        graph._display_opts.hidden_labels.add("Person")
+        graph._render_canvas()
+        await pilot.pause()
+        canvas = str(graph.query_one("#graph-canvas", Static).render())
+        assert "id=1" not in canvas
+        assert "id=2" in canvas
+
+        await pilot.press("p")
+        await pilot.pause()
+        assert not panel.is_open()
+
+
+async def test_display_panel_show_id_toggle_rerenders():
+    from falkorterm.widgets.graph_display_panel import GraphDisplayPanel
+
+    app = GraphHarness()
+    async with app.run_test(size=(120, 40)) as pilot:
+        results = app.query_one("#results", ResultsWidget)
+        results.show_result(
+            QueryResult(
+                columns=("a",),
+                rows=((_node(1, "Person"),),),
+                total_rows=1,
+            )
+        )
+        await pilot.pause()
+        results.action_toggle_graph()
+        await pilot.pause()
+        graph = results.query_one("#graph-view", GraphResultView)
+        canvas = str(graph.query_one("#graph-canvas", Static).render())
+        assert "id=1" in canvas
+
+        graph._display_opts.show_id = False
+        graph._render_canvas()
+        await pilot.pause()
+        canvas = str(graph.query_one("#graph-canvas", Static).render())
+        assert "id=1" not in canvas
+        assert ":Person" in canvas
+
+        panel = graph.query_one("#graph-display-panel", GraphDisplayPanel)
+        assert panel is not None
+
 
 
 class GraphCopyHarness(App):

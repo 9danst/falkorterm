@@ -6,9 +6,14 @@ from textual.widgets import Label, Static
 
 from falkorterm.client.models import CellValue, QueryResult
 from falkorterm.explore import ExpandNeighborsRequested
+from falkorterm.graph.display import GraphDisplayOptions, filter_graph
 from falkorterm.graph.extract import extract_graph
-from falkorterm.graph.layout import EMPTY_MESSAGE, layout_ascii
+from falkorterm.graph.layout import EMPTY_MESSAGE, NO_VISIBLE_MESSAGE, layout_ascii
 from falkorterm.graph.models import GraphNode, GraphViewModel, Hitbox
+from falkorterm.widgets.graph_display_panel import (
+    DisplayOptionsChanged,
+    GraphDisplayPanel,
+)
 from falkorterm.widgets.results import CellInspectRequested
 
 
@@ -19,6 +24,7 @@ class GraphResultView(ScrollableContainer):
 
     BINDINGS = [
         Binding("c", "copy_canvas", "Copy graph", show=False),
+        Binding("p", "toggle_display_panel", "Display", show=False),
     ]
 
     DEFAULT_CSS = """
@@ -26,6 +32,7 @@ class GraphResultView(ScrollableContainer):
         height: 1fr;
         overflow-x: auto;
         overflow-y: auto;
+        layers: base overlay;
     }
     GraphResultView #graph-canvas {
         height: auto;
@@ -36,6 +43,7 @@ class GraphResultView(ScrollableContainer):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._model: GraphViewModel | None = None
+        self._display_opts = GraphDisplayOptions()
         self._selected_index: int = 0
         self._node_order: tuple[int, ...] = ()
         self._nodes_by_id: dict[int, GraphNode] = {}
@@ -46,13 +54,19 @@ class GraphResultView(ScrollableContainer):
         yield Label("", id="graph-meta", classes="results-meta")
         yield Static(EMPTY_MESSAGE, id="graph-canvas", markup=True)
         yield Label("", id="graph-error", classes="results-error")
+        yield GraphDisplayPanel(
+            options=self._display_opts, id="graph-display-panel"
+        )
 
     def show_model(self, model: GraphViewModel, *, result_meta: str = "") -> None:
         error = self.query_one("#graph-error", Label)
         meta = self.query_one("#graph-meta", Label)
+        panel = self.query_one("#graph-display-panel", GraphDisplayPanel)
         error.update("")
         try:
             self._model = model
+            self._display_opts.sync_from_model(model)
+            panel.set_model(model)
             self._nodes_by_id = {n.id: n for n in model.nodes}
             self._node_order = tuple(n.id for n in model.nodes)
             if self._node_order:
@@ -87,12 +101,14 @@ class GraphResultView(ScrollableContainer):
         canvas = self.query_one("#graph-canvas", Static)
         error = self.query_one("#graph-error", Label)
         meta = self.query_one("#graph-meta", Label)
+        panel = self.query_one("#graph-display-panel", GraphDisplayPanel)
         self._model = None
         self._node_order = ()
         self._nodes_by_id = {}
         self._hitboxes = ()
         self._header_lines = 0
         self._selected_index = 0
+        panel.set_model(None)
         meta.update("")
         canvas.update("")
         error.update(message)
@@ -108,18 +124,52 @@ class GraphResultView(ScrollableContainer):
             return None
         return self._nodes_by_id.get(nid)
 
+    def _visible_model(self) -> GraphViewModel | None:
+        if self._model is None:
+            return None
+        return filter_graph(self._model, self._display_opts)
+
     def _render_canvas(self) -> None:
         canvas = self.query_one("#graph-canvas", Static)
         if self._model is None or not self._model.nodes:
             canvas.update(EMPTY_MESSAGE)
             self._hitboxes = ()
             self._header_lines = 0
+            self._node_order = ()
             return
+
+        visible = self._visible_model()
+        assert visible is not None
+        if not visible.nodes:
+            canvas.update(NO_VISIBLE_MESSAGE)
+            self._hitboxes = ()
+            self._header_lines = 0
+            self._node_order = ()
+            return
+
+        # Keep selection on a visible node.
+        visible_ids = {n.id for n in visible.nodes}
+        current = self._selected_id()
+        if current is None or current not in visible_ids:
+            self._node_order = tuple(n.id for n in visible.nodes)
+            self._selected_index = 0
+        else:
+            # Prefer layout order after render; seed from visible for safety.
+            self._node_order = tuple(n.id for n in visible.nodes)
+            self._selected_index = self._node_order.index(current)
+
         ascii_canvas = layout_ascii(
-            self._model,
+            visible,
             selected_id=self._selected_id(),
+            display=self._display_opts,
         )
         self._node_order = ascii_canvas.node_order or self._node_order
+        if self._node_order:
+            sid = self._selected_id()
+            if sid not in self._node_order:
+                self._selected_index = 0
+            else:
+                self._selected_index = self._node_order.index(sid)
         self._hitboxes = ascii_canvas.hitboxes
         self._header_lines = 1  # layout_ascii always prepends a session header
         canvas.update(
@@ -127,7 +177,21 @@ class GraphResultView(ScrollableContainer):
         )
         self._scroll_selection_into_view()
 
+    def action_toggle_display_panel(self) -> None:
+        panel = self.query_one("#graph-display-panel", GraphDisplayPanel)
+        if panel.is_open():
+            panel.close_panel()
+            self.focus()
+        else:
+            panel.open_panel()
+
+    def on_display_options_changed(self, _event: DisplayOptionsChanged) -> None:
+        self._render_canvas()
+
     def on_key(self, event) -> None:  # type: ignore[no-untyped-def]
+        panel = self.query_one("#graph-display-panel", GraphDisplayPanel)
+        if panel.is_open() and panel.has_focus_within:
+            return
         if event.key in {"up", "k"}:
             if self._move_selection(-1):
                 event.prevent_default()
@@ -205,13 +269,15 @@ class GraphResultView(ScrollableContainer):
         self.copy_canvas()
 
     def copy_canvas(self) -> bool:
-        if self._model is None or not self._model.nodes:
-            text = EMPTY_MESSAGE
+        visible = self._visible_model()
+        if visible is None or not visible.nodes:
+            text = EMPTY_MESSAGE if self._model is None else NO_VISIBLE_MESSAGE
         else:
             text = layout_ascii(
-                self._model,
+                visible,
                 selected_id=None,
                 include_header=False,
+                display=self._display_opts,
             ).text
         self.app.copy_to_clipboard(text, what="graph")
         return True

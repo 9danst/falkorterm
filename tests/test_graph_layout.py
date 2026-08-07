@@ -1,4 +1,5 @@
 from falkorterm.graph.colors import EMPTY_MESSAGE, color_for
+from falkorterm.graph.display import GraphDisplayOptions
 from falkorterm.graph.layout import layout_ascii
 from falkorterm.graph.models import GraphEdge, GraphNode, GraphViewModel
 
@@ -89,3 +90,51 @@ def test_layout_same_label_same_border_color():
     second = plain.index("┌", first + 1)
     assert color_for("Person") in _style_at(canvas.rich, first)
     assert color_for("Person") in _style_at(canvas.rich, second)
+
+
+def test_layout_hides_id_when_show_id_false():
+    model = GraphViewModel(
+        nodes=(
+            GraphNode(
+                id=1,
+                labels=("Person",),
+                properties={"name": "Ada"},
+                display="(:Person id=1)",
+            ),
+        ),
+        edges=(),
+        total_nodes=1,
+        total_edges=0,
+    )
+    opts = GraphDisplayOptions(
+        props_by_label={"Person": ["name"]},
+        show_id=False,
+    )
+    canvas = layout_ascii(model, display=opts)
+    assert "id=1" not in canvas.text
+    assert "name=Ada" in canvas.text
+
+
+def test_layout_shows_multiple_selected_props():
+    model = GraphViewModel(
+        nodes=(
+            GraphNode(
+                id=1,
+                labels=("Person",),
+                properties={"name": "Ada", "email": "a@x", "age": 30},
+                display="(:Person id=1)",
+            ),
+        ),
+        edges=(),
+        total_nodes=1,
+        total_edges=0,
+    )
+    opts = GraphDisplayOptions(
+        props_by_label={"Person": ["name", "email"]},
+        show_id=True,
+    )
+    canvas = layout_ascii(model, display=opts)
+    assert "id=1" in canvas.text
+    assert "name=Ada" in canvas.text
+    assert "email=a@x" in canvas.text
+    assert "age=" not in canvas.text

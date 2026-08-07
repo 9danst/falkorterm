@@ -12,7 +12,7 @@ from falkorterm.graph.extract import extract_graph
 from falkorterm.graph.render_surf import surf_hint
 from falkorterm.graph.session import SurfSession
 
-GRAPH_HINT = "g table/ascii/surf · ↑↓ · Enter · x expand · c copy"
+GRAPH_HINT = "g table/ascii/surf · ↑↓ · Enter · x expand · p display · c copy"
 SURF_HINT = "g table/ascii/surf · j/k · l hop · h/Ctrl+o back · L forward · Tab · x · c"
 _FOCUS_TITLE_MAX = 24
 TabId = Literal["table", "graph", "surf"]
