@@ -131,7 +131,8 @@ def test_layout_hides_id_when_show_id_false():
     )
     canvas = layout_ascii(model, display=opts)
     assert "id=1" not in canvas.text
-    assert "name=Ada" in canvas.text
+    assert "Ada" in canvas.text
+    assert "name=" not in canvas.text
 
 
 def test_layout_shows_multiple_selected_props():
@@ -154,6 +155,65 @@ def test_layout_shows_multiple_selected_props():
     )
     canvas = layout_ascii(model, display=opts)
     assert "id=1" in canvas.text
-    assert "name=Ada" in canvas.text
+    assert "Ada" in canvas.text
+    assert "name=" not in canvas.text
     assert "email=a@x" in canvas.text
     assert "age=" not in canvas.text
+
+
+def _inner_lines_from_box(lines: list[str]) -> list[str]:
+    inner: list[str] = []
+    for line in lines:
+        if line.startswith(("│ ", "║ ")):
+            inner.append(line[2:-2].strip())
+    return inner
+
+
+def _box_lines_for_node(canvas_text: str, node_id: int, hitboxes) -> list[str]:
+    hb = next(h for h in hitboxes if h.node_id == node_id)
+    all_lines = canvas_text.splitlines()
+    return all_lines[hb.y0 : hb.y1 + 1]
+
+
+def test_layout_caps_unselected_box_width():
+    long_label = "A" * 40
+    model = GraphViewModel(
+        nodes=(
+            GraphNode(
+                id=1,
+                labels=(long_label,),
+                properties={},
+                display=f"(:{long_label} id=1)",
+            ),
+        ),
+        edges=(),
+        total_nodes=1,
+        total_edges=0,
+    )
+    canvas = layout_ascii(model, selected_id=None, include_header=False)
+    box_lines = _box_lines_for_node(canvas.text, 1, canvas.hitboxes)
+    inner = _inner_lines_from_box(box_lines)
+    assert all(len(line) <= 24 for line in inner)
+    assert len(box_lines[0]) <= 24 + 4
+
+
+def test_layout_selected_box_allows_wider_width():
+    long_label = "B" * 30
+    model = GraphViewModel(
+        nodes=(
+            GraphNode(
+                id=1,
+                labels=(long_label,),
+                properties={},
+                display=f"(:{long_label} id=1)",
+            ),
+        ),
+        edges=(),
+        total_nodes=1,
+        total_edges=0,
+    )
+    canvas = layout_ascii(model, selected_id=1, include_header=False)
+    box_lines = _box_lines_for_node(canvas.text, 1, canvas.hitboxes)
+    inner = _inner_lines_from_box(box_lines)
+    assert all(len(line) <= 32 for line in inner)
+    assert len(box_lines[0]) <= 32 + 4

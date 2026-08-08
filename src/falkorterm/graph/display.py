@@ -8,6 +8,14 @@ _AUTO_PROP_KEYS = ("name", "title", "label")
 _MAX_PROPS = 3
 
 
+def fit_line(text: str, max_len: int) -> str:
+    if len(text) <= max_len:
+        return text
+    if max_len <= 0:
+        return ""
+    return text[: max_len - 1] + "…"
+
+
 def _auto_prop_key(properties: dict[str, object]) -> str | None:
     for key in _AUTO_PROP_KEYS:
         if key in properties and properties[key] is not None:
@@ -104,7 +112,4 @@ def toggle_prop(opts: GraphDisplayOptions, label: str, key: str) -> None:
 
 
 def format_prop_line(key: str, value: object, *, max_len: int = 16) -> str:
-    text = f"{key}={value}".replace("\n", " ")
-    if len(text) > max_len:
-        return text[: max_len - 1] + "…"
-    return text
+    return fit_line(f"{key}={value}".replace("\n", " "), max_len)
