@@ -2,10 +2,7 @@
 
 TUI client ([Textual](https://textual.textualize.io/)) for [FalkorDB](https://www.falkordb.com/): explore labels and relationships, write Cypher, and view results as a table or graph.
 
-<p align="center">
-  <img src="docs/assets/screenshot-1.svg" alt="FalkorTerm screenshot 1" width="49%" />
-  <img src="docs/assets/screenshot-2.svg" alt="FalkorTerm screenshot 2" width="49%" />
-</p>
+![FalkorTerm screenshot](docs/assets/screenshot-1.svg)
 
 ## Requirements
 
