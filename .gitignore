@@ -7,7 +7,7 @@ dist/
 build/
 .python-version
 .env
-docs/
+docs/superpowers
 .superpowers/
 misc/
 keys.log
