@@ -50,7 +50,7 @@ ResultsWidget:focus-within {
 }
 
 QueryWidget {
-    height: 12;
+    height: 6;
     border: tall $secondary;
     border-title-color: $accent;
     border-title-align: left;
@@ -98,7 +98,7 @@ StatusBar .status-run {
 
 ContextWidget #context-logo {
     height: auto;
-    padding-bottom: 1;
+    padding-bottom: 0;
     align: center middle;
 }
 
@@ -131,7 +131,6 @@ ContextWidget #graph-summary {
     height: auto;
     border: round $primary 40%;
     padding: 0 1;
-    margin-bottom: 1;
     color: $text-muted;
 }
 
@@ -187,7 +186,7 @@ ContextWidget ListView {
 
 .results-meta {
     color: $text-muted;
-    padding: 0 0 1 0;
+    padding: 0;
     height: 1;
 }
 

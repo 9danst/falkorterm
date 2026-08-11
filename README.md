@@ -2,7 +2,7 @@
 
 TUI client ([Textual](https://textual.textualize.io/)) for [FalkorDB](https://www.falkordb.com/): explore labels and relationships, write Cypher, and view results as a table or graph.
 
-![FalkorTerm screenshot](docs/assets/screenshot-1.svg)
+![FalkorTerm screenshot](docs/assets/screenshot-main.svg)
 
 ## Requirements
 
@@ -45,6 +45,17 @@ uv run python -m falkorterm
 On launch you get the **connection screen**. Use **Connect** to list graphs and **Open** to enter one. You can save named profiles (host/port/password/graph/read-only); if a `default` profile exists, it is applied on open. Press `Ctrl+o` to switch graph or server without restarting.
 
 Enable **Read-only** (or `FALKOR_READ_ONLY=1`) to block write queries in the client (this is not a server ACL). Without read-only, writes (`CREATE`, `MERGE`, `DELETE`, etc.) ask for confirmation. The editor suggests labels/relationships/properties from the schema (accept with the right arrow).
+
+### Browser (`textual serve`)
+
+To open the same TUI in a browser (via [textual-serve](https://github.com/Textualize/textual-serve)), load `.env` as above and run:
+
+```bash
+set -a && source .env && set +a
+uv run textual serve "python -m falkorterm"
+```
+
+Then open http://localhost:8000. Useful flags: `-p` / `--port` for another port, `-h` / `--host` to bind a different interface, `--dev` for Textual DevTools.
 
 ### Environment variables
 
