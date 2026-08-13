@@ -135,12 +135,15 @@ class FalkorTerm(App):
         client: FalkorClient | None = None,
         history_store: HistoryStore | None = None,
         profile_store: ProfileStore | None = None,
+        *,
+        skip_connect: bool = False,
     ) -> None:
         super().__init__()
         self.config = config or load_config()
         self.client = client or FalkorClient()
         self.history_store = history_store or HistoryStore()
         self.profile_store = profile_store or ProfileStore()
+        self._skip_connect = skip_connect
         self._query_running = False
         self._query_generation = 0
         self._connection_ok = False
@@ -163,6 +166,15 @@ class FalkorTerm(App):
         self.query_one("#status", StatusBar).set_connection(
             "disconnected", status_target(self.config), detail="opening…"
         )
+        if self._skip_connect:
+            try:
+                self.client.connect(self.config)
+            except FalkorConnectionError as exc:
+                self.notify(f"Connect failed: {exc}", severity="error")
+                self._push_connection_screen(can_dismiss=False)
+                return
+            self._on_connection_result(self.config)
+            return
         self._push_connection_screen(can_dismiss=False)
 
     def action_focus_context(self) -> None:
@@ -436,5 +448,9 @@ class FalkorTerm(App):
         self.query_one("#status", StatusBar).set_status(text)
 
 
-def run_app(config: ConnectionConfig | None = None) -> None:
-    FalkorTerm(config=config).run()
+def run_app(
+    config: ConnectionConfig | None = None,
+    *,
+    skip_connect: bool = False,
+) -> None:
+    FalkorTerm(config=config, skip_connect=skip_connect).run()

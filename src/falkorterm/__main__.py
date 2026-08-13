@@ -1,9 +1,8 @@
-from falkorterm.app import run_app
-from falkorterm.config import load_config
+from falkorterm.cli import main as cli_main
 
 
 def main() -> None:
-    run_app(load_config())
+    raise SystemExit(cli_main())
 
 
 if __name__ == "__main__":

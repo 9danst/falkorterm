@@ -44,7 +44,106 @@ uv run python -m falkorterm
 
 On launch you get the **connection screen**. Use **Connect** to list graphs and **Open** to enter one. You can save named profiles (host/port/password/graph/read-only); if a `default` profile exists, it is applied on open. Press `Ctrl+o` to switch graph or server without restarting.
 
+Skip the connection screen when host/graph are already known:
+
+```bash
+uv run falkorterm --profile local --skip-connect
+uv run falkorterm --host 127.0.0.1 --graph social --skip-connect
+```
+
 Enable **Read-only** (or `FALKOR_READ_ONLY=1`) to block write queries in the client (this is not a server ACL). Without read-only, writes (`CREATE`, `MERGE`, `DELETE`, etc.) ask for confirmation. The editor suggests labels/relationships/properties from the schema (accept with the right arrow).
+
+### CLI
+
+`falkorterm` with no arguments (or `tui`) opens the TUI. Connection flags apply to both the TUI and headless commands. Precedence: **flags > `--profile` > env `FALKOR_*` > defaults**.
+
+```bash
+uv run falkorterm --help
+```
+
+#### Commands
+
+| Command | Description |
+|---------|-------------|
+| _(none)_ / `tui` | Open the interactive TUI |
+| `graphs` | List graphs on the server |
+| `schema` | Print labels, relationships, property keys, and counts |
+| `ping` | Connect and run `RETURN 1` |
+
+#### Connection flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-H`, `--host` | `FALKOR_HOST` / `localhost` | FalkorDB host |
+| `-P`, `--port` | `FALKOR_PORT` / `6379` | FalkorDB port |
+| `-g`, `--graph` | `FALKOR_GRAPH` / `falkorterm` | Graph name |
+| `--password-file PATH` | `FALKOR_PASSWORD` | Read the password from a file (avoids exposing it in `ps`) |
+| `--profile NAME` | | Named connection profile from `profiles.json` |
+| `-r`, `--read-only` | `FALKOR_READ_ONLY` | Block write queries in the client (not a server ACL) |
+| `--timeout MS` | `FALKOR_TIMEOUT_MS` / `30000` | Query timeout in milliseconds |
+| `--max-rows N` | `FALKOR_MAX_ROWS` / `500` | Max rows returned to the client |
+| `--skip-connect` | off | TUI only: connect with resolved settings and skip the connection screen |
+| `--version` | | Print the version and exit |
+
+#### Query and output flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-q`, `--query CYPHER` | | Run Cypher headless; `-q -` reads stdin |
+| `-f`, `--query-file PATH` | | Read Cypher from a file (mutually exclusive with `-q`) |
+| `-o`, `--format` | `table` on a TTY, `json` when piped | `table`, `csv`, `tsv`, or `json` |
+| `--output PATH` | stdout | Write query results to a file |
+| `--no-header` | off | Omit the column header in `csv` / `tsv` |
+| `-y`, `--yes` | off | Confirm write queries in headless mode (no TUI modal) |
+| `--no-color` | off (also respects `NO_COLOR`) | Disable color in `table` output |
+| `--output-diagram PATH` | | Write an ASCII graph to `PATH`; `-` is stdout |
+| `--diagram-style` | `ascii` | `ascii` (boxed layout) or `edges` (`(1)-[:KNOWS]->(2)`) |
+| `--diagram-only` | off | Do not print the tabular result |
+| `--max-nodes N` | `25` | Max nodes included in the diagram |
+| `--max-edges N` | `40` | Max edges included in the diagram |
+
+`--output-diagram -` cannot share stdout with the result table unless you also pass `--diagram-only`. If the result has no nodes/edges, the command exits `4`. Write queries without `--yes` exit `3`; `--read-only` blocks them even with `--yes`.
+
+#### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Cypher / query error |
+| `2` | Usage error or connection failure |
+| `3` | Write blocked (`--read-only` or missing `--yes`) |
+| `4` | `--output-diagram` requested but the result is not a graph |
+
+Results go to stdout; errors and warnings (e.g. `truncated`) go to stderr.
+
+#### Examples
+
+```bash
+# TUI
+uv run falkorterm
+uv run falkorterm --profile local --skip-connect
+uv run falkorterm --host 127.0.0.1 --graph social --skip-connect
+
+# One-shot query
+uv run falkorterm -q 'MATCH (n:Person) RETURN n.name LIMIT 10'
+uv run falkorterm -f query.cypher --format csv --output people.csv
+echo 'RETURN 1' | uv run falkorterm -q - --format json
+uv run falkorterm -q 'MATCH (n) RETURN n.name' --format tsv --no-header
+uv run falkorterm -q 'CREATE (n:Person {name: "Ada"})' --yes
+
+# ASCII diagram
+uv run falkorterm -q 'MATCH (a)-[r]->(b) RETURN a,r,b LIMIT 40' \
+  --output-diagram graph.txt
+uv run falkorterm -q 'MATCH (a)-[r]->(b) RETURN a,r,b' \
+  --diagram-only --diagram-style edges
+uv run falkorterm -q 'MATCH (a)-[r]->(b) RETURN a,r,b' \
+  --format json --output-diagram graph.txt --max-nodes 100 --max-edges 200
+
+# Inspect
+uv run falkorterm graphs
+uv run falkorterm schema --format json
+uv run falkorterm ping --host 127.0.0.1 --port 6379
+```
 
 ### Browser (`textual serve`)
 

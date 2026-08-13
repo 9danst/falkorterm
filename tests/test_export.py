@@ -7,6 +7,7 @@ from falkorterm.export import (
     default_export_dir,
     result_to_csv,
     result_to_json,
+    result_to_tsv,
     write_export,
 )
 
@@ -56,4 +57,24 @@ def test_write_export_creates_file(tmp_path: Path):
     path_json = write_export(_sample_result(), "json", directory=tmp_path)
     assert path_json.suffix == ".json"
     data = json.loads(path_json.read_text(encoding="utf-8"))
+    assert data["columns"] == ["name", "note"]
+
+
+def test_result_to_csv_no_header():
+    text = result_to_csv(_sample_result(), header=False)
+    assert not text.startswith("name")
+    assert "Ada" in text
+
+
+def test_result_to_tsv():
+    text = result_to_tsv(_sample_result())
+    assert text.splitlines()[0] == "name\tnote"
+    assert "Ada" in text
+
+
+def test_write_export_explicit_path(tmp_path: Path):
+    dest = tmp_path / "nested" / "out.json"
+    path = write_export(_sample_result(), "json", path=dest)
+    assert path == dest
+    data = json.loads(dest.read_text(encoding="utf-8"))
     assert data["columns"] == ["name", "note"]

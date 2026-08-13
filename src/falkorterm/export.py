@@ -23,10 +23,20 @@ def default_export_dir() -> Path:
     return Path.home() / ".local" / "share" / "falkorterm" / "exports"
 
 
-def result_to_csv(result: QueryResult) -> str:
+def result_to_csv(result: QueryResult, *, header: bool = True) -> str:
     buf = io.StringIO()
     writer = csv.writer(buf)
-    if result.columns:
+    if header and result.columns:
+        writer.writerow(result.columns)
+    for row in result.rows:
+        writer.writerow([cell.display for cell in row])
+    return buf.getvalue()
+
+
+def result_to_tsv(result: QueryResult, *, header: bool = True) -> str:
+    buf = io.StringIO()
+    writer = csv.writer(buf, delimiter="\t", lineterminator="\n")
+    if header and result.columns:
         writer.writerow(result.columns)
     for row in result.rows:
         writer.writerow([cell.display for cell in row])
@@ -47,14 +57,21 @@ def write_export(
     result: QueryResult,
     fmt: ExportFormat,
     directory: Path | None = None,
+    *,
+    path: Path | None = None,
+    header: bool = True,
 ) -> Path:
+    if fmt == "csv":
+        content = result_to_csv(result, header=header)
+    else:
+        content = result_to_json(result)
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return path
     out_dir = directory or default_export_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    path = out_dir / f"{stamp}.{fmt}"
-    if fmt == "csv":
-        content = result_to_csv(result)
-    else:
-        content = result_to_json(result)
-    path.write_text(content, encoding="utf-8")
-    return path
+    out_path = out_dir / f"{stamp}.{fmt}"
+    out_path.write_text(content, encoding="utf-8")
+    return out_path
